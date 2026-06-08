@@ -1,0 +1,11 @@
+{
+  "name": "@anime-watch/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "python -m uvicorn src.main:app --host 127.0.0.1 --port 3001 --reload",
+    "build": "python -m compileall src tests",
+    "typecheck": "python -m compileall src tests",
+    "test": "python -m pytest"
+  }
+}

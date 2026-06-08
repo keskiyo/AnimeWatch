@@ -1,0 +1,26 @@
+{
+	"name": "anime-watch-web",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"workspaces": [
+		"backend",
+		"frontend"
+	],
+	"scripts": {
+		"dev": "bun run stop:dev && concurrently -k -n backend,frontend -c cyan,magenta \"bun run dev:backend\" \"bun run dev:frontend\"",
+		"dev:backend": "bun run --cwd backend dev",
+		"dev:frontend": "bun run --cwd frontend dev --host localhost",
+		"dev:services": "bun run dev",
+		"stop:dev": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/stop-dev-ports.ps1",
+		"build": "bun run build:backend && bun run build:frontend",
+		"build:backend": "bun run --cwd backend build",
+		"build:frontend": "bun run --cwd frontend build",
+		"typecheck": "bun run --cwd backend typecheck && bun run --cwd frontend typecheck",
+		"test": "bun run --cwd backend test && bun run --cwd frontend test"
+	},
+	"devDependencies": {
+		"concurrently": "10.0.3",
+		"typescript": "6.0.3"
+	}
+}
