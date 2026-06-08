@@ -1,11 +1,36 @@
-node_modules
-dist
-build
+# Node modules
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+build/
+backend/dist/
+frontend/dist/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Environment files
 .env
 .env.*
 !.env.example
-backend/data
-frontend/dist
-src-tauri/target
-src-tauri/gen
+
+# Data
+backend/data/
+
+# Logs
 *.log
+logs/
+
+# Tests
+*.tests
+tests.*
+tests/
+backend/tests/
+frontend/tests/
+
+# Cache
+.pytest_cache/
