@@ -1,17 +1,13 @@
-import { getCatalog } from '@/api/animeApi'
 import type { Anime } from '@/types/anime'
-import type { CatalogViewMode, SortDirection, SortOption } from '@/types/catalog'
+import type {
+	CatalogViewMode,
+	ClientFilters,
+	SortDirection,
+	SortOption,
+} from '@/types/catalog'
 import { CATALOG_VIEW_MODES } from '@/utils/catalogData'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-
-export type CatalogFilters = {
-	type?: string
-	status?: string
-	year_from?: string
-	year_to?: string
-	genres?: string
-	age_rating?: string
-}
+import { useAnimeCache } from './useAnimeCache'
 
 export type AnimeCatalogState = {
 	anime: Anime[]
@@ -19,6 +15,9 @@ export type AnimeCatalogState = {
 	isInitialLoading: boolean
 	isLoadingMore: boolean
 	hasMore: boolean
+	cacheLoaded: number
+	cacheTotal: number
+	cacheComplete: boolean
 	loadMore: () => Promise<void>
 }
 
@@ -26,99 +25,145 @@ export function useAnimeCatalog(
 	viewMode: CatalogViewMode,
 	sortOption: SortOption,
 	sortDirection: SortDirection,
-	filters?: CatalogFilters,
+	filters?: ClientFilters,
 ): AnimeCatalogState {
-	const [isLoadingMore, setIsLoadingMore] = useState(false)
-	const [isInitialLoading, setIsInitialLoading] = useState(true)
-	const [anime, setAnime] = useState<Anime[]>([])
-	const [page, setPage] = useState(1)
-	const [total, setTotal] = useState(0)
-	const [error, setError] = useState<string | undefined>()
-	const viewLimit = useMemo(
+	const { anime: allAnime, total: cacheTotal, isComplete, isLoading } =
+		useAnimeCache()
+
+	const pageSize = useMemo(
 		() =>
-			CATALOG_VIEW_MODES.find(mode => mode.id === viewMode)?.limit ??
-			CATALOG_VIEW_MODES[0]!.limit,
+			CATALOG_VIEW_MODES.find(m => m.id === viewMode)?.limit ?? 12,
 		[viewMode],
 	)
-	const hasMore = anime.length < total
-	const filtersKey = JSON.stringify(filters ?? null)
+
+	const [displayCount, setDisplayCount] = useState(pageSize)
+
+	// Build a stable key from filters + sort so we can reset display count
+	const resetKey = useMemo(() => {
+		const f = filters
+		return [
+			sortOption,
+			sortDirection,
+			...(f ? [...f.types].sort() : []),
+			'|',
+			...(f ? [...f.statuses].sort() : []),
+			'|',
+			...(f ? [...f.ageRatings].sort() : []),
+			'|',
+			...(f ? [...f.episodeCounts].sort() : []),
+			'|',
+			...(f ? [...f.genres].sort() : []),
+			f?.isStrictMatch ?? false,
+			f?.fromYear ?? 1980,
+			f?.toYear ?? new Date().getFullYear(),
+		].join(',')
+	}, [filters, sortOption, sortDirection])
 
 	useEffect(() => {
-		let isCancelled = false
+		setDisplayCount(pageSize)
+	}, [resetKey, pageSize])
 
-		async function loadFirstPage() {
-			setIsInitialLoading(true)
-			setError(undefined)
+	const processed = useMemo(() => {
+		const filtered = filters ? applyFilters(allAnime, filters) : allAnime
+		return applySort(filtered, sortOption, sortDirection)
+	}, [allAnime, filters, sortOption, sortDirection])
 
-			try {
-				const result = await getCatalog({
-					page: '1',
-					limit: String(viewLimit),
-					sort: getSortParam(sortOption),
-					direction: sortDirection,
-					...(filters ?? {}),
-				})
-
-				if (isCancelled) return
-
-				setAnime(result.data)
-				setPage(result.page)
-				setTotal(result.total)
-			} catch {
-				if (!isCancelled) {
-					setError('Не удалось загрузить каталог.')
-				}
-			} finally {
-				if (!isCancelled) {
-					setIsInitialLoading(false)
-				}
-			}
-		}
-
-		void loadFirstPage()
-
-		return () => {
-			isCancelled = true
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [sortDirection, sortOption, viewLimit, filtersKey])
+	const displayed = processed.slice(0, displayCount)
+	const hasMore = displayCount < processed.length
 
 	const loadMore = useCallback(async () => {
-		if (isLoadingMore || !hasMore) return
-
-		setIsLoadingMore(true)
-
-		try {
-			const nextPage = page + 1
-			const result = await getCatalog({
-				page: String(nextPage),
-				limit: String(viewLimit),
-				sort: getSortParam(sortOption),
-				direction: sortDirection,
-				...(filters ?? {}),
-			})
-
-			setAnime(current => [...current, ...result.data])
-			setPage(result.page)
-			setTotal(result.total)
-		} finally {
-			setIsLoadingMore(false)
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [hasMore, isLoadingMore, page, sortDirection, sortOption, viewLimit, filtersKey])
+		setDisplayCount(prev => prev + pageSize)
+	}, [pageSize])
 
 	return {
-		anime,
-		error,
-		isInitialLoading,
-		isLoadingMore,
+		anime: displayed,
+		isInitialLoading: allAnime.length === 0 && isLoading,
+		isLoadingMore: false,
 		hasMore,
+		cacheLoaded: allAnime.length,
+		cacheTotal,
+		cacheComplete: isComplete,
 		loadMore,
 	}
 }
 
-function getSortParam(option: SortOption): string {
-	if (option === 'рейтингу') return 'rating'
-	if (option === 'дате добавления') return 'createdAt'
-	return 'startDate'
+// ─── Client-side filtering ──────────────────────────────────────────────────
+
+function applyFilters(anime: Anime[], f: ClientFilters): Anime[] {
+	const { types, statuses, ageRatings, episodeCounts, genres, isStrictMatch, fromYear, toYear } = f
+
+	return anime.filter(item => {
+		// Type
+		if (types.size > 0 && !types.has(item.type)) return false
+
+		// Status (special-case "recent" = released in last 6 months)
+		if (statuses.size > 0) {
+			const includeRecent = statuses.has('recent')
+			const directStatuses = new Set([...statuses].filter(s => s !== 'recent'))
+
+			let ok = directStatuses.size > 0 && directStatuses.has(item.status)
+			if (!ok && includeRecent) {
+				const cutoff = new Date()
+				cutoff.setMonth(cutoff.getMonth() - 6)
+				ok = new Date(item.updated_at) >= cutoff
+			}
+			if (!ok) return false
+		}
+
+		// Year range
+		if (item.year < fromYear || item.year > toYear) return false
+
+		// Genres
+		if (genres.size > 0) {
+			const itemGenres = item.genres
+			if (isStrictMatch) {
+				if (![...genres].every(g => itemGenres.includes(g))) return false
+			} else {
+				if (!itemGenres.some(g => genres.has(g))) return false
+			}
+		}
+
+		// Episode count
+		if (episodeCounts.size > 0) {
+			const ep = item.episodes_total > 0 ? item.episodes_total : item.episodes_aired
+			let ok = false
+			if (episodeCounts.has('Короткие') && ep > 0 && ep <= 4) ok = true
+			if (episodeCounts.has('Средние') && ep >= 5 && ep <= 16) ok = true
+			if (episodeCounts.has('Длинные') && ep >= 17 && ep <= 100) ok = true
+			if (episodeCounts.has('Очень длинные') && ep > 100) ok = true
+			if (!ok) return false
+		}
+
+		// Age rating — only if the backend sends this field
+		if (ageRatings.size > 0) {
+			const mpaa = (item as Anime & { rating_mpaa?: string }).rating_mpaa
+			if (mpaa && !ageRatings.has(mpaa)) return false
+		}
+
+		return true
+	})
+}
+
+// ─── Client-side sorting ────────────────────────────────────────────────────
+
+function applySort(anime: Anime[], option: SortOption, direction: SortDirection): Anime[] {
+	return [...anime].sort((a, b) => {
+		let cmp = 0
+
+		if (option === 'рейтингу') {
+			cmp = b.rating - a.rating
+		} else if (option === 'новизне') {
+			cmp = b.year - a.year
+			if (cmp === 0) {
+				cmp =
+					new Date(b.updated_at).getTime() -
+					new Date(a.updated_at).getTime()
+			}
+		} else {
+			// дате добавления — use id as proxy (higher id = added later)
+			cmp = b.id - a.id
+		}
+
+		return direction === 'asc' ? -cmp : cmp
+	})
 }

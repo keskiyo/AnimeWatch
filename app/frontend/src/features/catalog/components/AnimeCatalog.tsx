@@ -1,18 +1,12 @@
 import { LoadMore } from '@/features/components/LoadMore'
 import { CatalogIntro } from '@/features/catalog/components/CatalogIntro'
 import { ViewModeButtons } from '@/features/catalog/components/ViewModeButtons'
-import {
-	type CatalogFilters,
-	useAnimeCatalog,
-} from '@/features/catalog/hooks/useAnimeCatalog'
-import type {
-	CatalogViewMode,
-	SortDirection,
-	SortOption,
-} from '@/types/catalog'
+import { useAnimeCatalog } from '@/features/catalog/hooks/useAnimeCatalog'
+import type { CatalogViewMode, SortDirection, SortOption } from '@/types/catalog'
 import {
 	CATALOG_INTRO_COLLAPSED,
 	CATALOG_INTRO_EXPANDED,
+	parseClientFilters,
 } from '@/utils/catalogData'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -25,55 +19,6 @@ const GRID_CLASSES: Record<CatalogViewMode, string> = {
 	list: 'grid grid-cols-1 gap-x-5 gap-y-7',
 }
 
-const TYPE_MAP: Record<string, string> = {
-	Сериал: 'tv',
-	Фильм: 'movie',
-	OVA: 'ova',
-	ONA: 'ona',
-	Спешл: 'special',
-}
-
-const STATUS_MAP: Record<string, string> = {
-	Онгоинг: 'ongoing',
-	Вышел: 'released',
-	Анонс: 'announced',
-	Недавно: 'recent',
-}
-
-function parseApiFilters(searchParams: URLSearchParams): CatalogFilters {
-	const checkedRaw = searchParams.get('f')?.split(',').filter(Boolean) ?? []
-	const genres = searchParams.get('genres')?.split(',').filter(Boolean) ?? []
-	const fromYear = searchParams.get('fromYear')
-	const toYear = searchParams.get('toYear')
-
-	const types: string[] = []
-	const statuses: string[] = []
-
-	for (const item of checkedRaw) {
-		const colonIdx = item.indexOf(':')
-		if (colonIdx < 0) continue
-		const category = item.slice(0, colonIdx)
-		const value = item.slice(colonIdx + 1)
-
-		if (category === 'Тип') {
-			const mapped = TYPE_MAP[value]
-			if (mapped) types.push(mapped)
-		} else if (category === 'Статус') {
-			const mapped = STATUS_MAP[value]
-			if (mapped) statuses.push(mapped)
-		}
-	}
-
-	const filters: CatalogFilters = {}
-	if (types.length > 0) filters.type = types.join(',')
-	if (statuses.length > 0) filters.status = statuses.join(',')
-	if (fromYear) filters.year_from = fromYear
-	if (toYear) filters.year_to = toYear
-	if (genres.length > 0) filters.genres = genres.join(',')
-
-	return filters
-}
-
 export function AnimeCatalog() {
 	const [searchParams, setSearchParams] = useSearchParams()
 	const [viewMode, setViewMode] = useState<CatalogViewMode>('poster')
@@ -84,7 +29,7 @@ export function AnimeCatalog() {
 	const sortOption = (searchParams.get('sort') as SortOption) ?? 'новизне'
 	const sortDirection =
 		(searchParams.get('direction') as SortDirection) ?? 'desc'
-	const filters = useMemo(() => parseApiFilters(searchParams), [searchParams])
+	const filters = useMemo(() => parseClientFilters(searchParams), [searchParams])
 
 	const catalog = useAnimeCatalog(viewMode, sortOption, sortDirection, filters)
 	const introParagraphs = isIntroExpanded
@@ -97,10 +42,7 @@ export function AnimeCatalog() {
 			prev => {
 				const next = new URLSearchParams(prev)
 				if (option === sortOption) {
-					next.set(
-						'direction',
-						sortDirection === 'desc' ? 'asc' : 'desc',
-					)
+					next.set('direction', sortDirection === 'desc' ? 'asc' : 'desc')
 				} else {
 					next.set('sort', option)
 					next.set('direction', 'desc')
@@ -160,6 +102,12 @@ export function AnimeCatalog() {
 				paragraphs={introParagraphs}
 			/>
 			<hr className='mt-4 border-0 border-t border-aw-border' />
+			{!catalog.cacheComplete && catalog.cacheLoaded > 0 && (
+				<div className='py-1.5 text-xs text-aw-subtle'>
+					Загружено {catalog.cacheLoaded}
+					{catalog.cacheTotal > 0 ? ` / ${catalog.cacheTotal}` : ''} аниме...
+				</div>
+			)}
 			<div className='relative flex min-h-14.25 items-center justify-between'>
 				<SortDropdown
 					selected={sortOption}
@@ -210,7 +158,7 @@ function CatalogBody({
 	if (catalog.anime.length === 0) {
 		return (
 			<div className='py-10 text-center text-aw-subtle'>
-				В каталоге пока ничего нет.
+				Ничего не найдено по заданным фильтрам.
 			</div>
 		)
 	}

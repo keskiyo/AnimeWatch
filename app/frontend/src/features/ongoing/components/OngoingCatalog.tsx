@@ -6,10 +6,13 @@ import { LoadMore } from '@/features/components/LoadMore'
 import { OngoingCatalogInfo } from '@/features/ongoing/components/OngoingCatalogInfo'
 import type {
 	CatalogViewMode,
+	ClientFilters,
 	SortDirection,
 	SortOption,
 } from '@/types/catalog'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { parseClientFilters } from '@/utils/catalogData'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 const GRID_CLASSES: Record<CatalogViewMode, string> = {
 	poster: 'grid grid-cols-4 gap-x-5 gap-y-7 max-[900px]:grid-cols-3 max-[640px]:grid-cols-2 max-[420px]:grid-cols-1',
@@ -18,22 +21,30 @@ const GRID_CLASSES: Record<CatalogViewMode, string> = {
 }
 
 export function OngoingCatalog() {
+	const [searchParams] = useSearchParams()
 	const [viewMode, setViewMode] = useState<CatalogViewMode>('poster')
 	const [sortOption, setSortOption] = useState<SortOption>('новизне')
 	const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 	const [isAutoLoadEnabled, setIsAutoLoadEnabled] = useState(false)
 	const loadMoreRef = useRef<HTMLDivElement>(null)
-	const catalog = useAnimeCatalog(viewMode, sortOption, sortDirection)
+
+	// Merge sidebar filters but always force status=ongoing
+	const filters = useMemo<ClientFilters>(() => {
+		const base = parseClientFilters(searchParams)
+		return {
+			...base,
+			statuses: new Set(['ongoing']),
+		}
+	}, [searchParams])
+
+	const catalog = useAnimeCatalog(viewMode, sortOption, sortDirection, filters)
 
 	function toggleSortOption(option: SortOption) {
 		setIsAutoLoadEnabled(false)
 		if (option === sortOption) {
-			setSortDirection(direction =>
-				direction === 'desc' ? 'asc' : 'desc',
-			)
+			setSortDirection(d => (d === 'desc' ? 'asc' : 'desc'))
 			return
 		}
-
 		setSortOption(option)
 		setSortDirection('desc')
 	}
@@ -83,6 +94,12 @@ export function OngoingCatalog() {
 		<section className='min-w-0 rounded-lg bg-aw-surface px-3.75 pb-7 pt-4'>
 			<OngoingCatalogInfo />
 			<hr className='mt-4 border-0 border-t border-aw-border' />
+			{!catalog.cacheComplete && catalog.cacheLoaded > 0 && (
+				<div className='py-1.5 text-xs text-aw-subtle'>
+					Загружено {catalog.cacheLoaded}
+					{catalog.cacheTotal > 0 ? ` / ${catalog.cacheTotal}` : ''} аниме...
+				</div>
+			)}
 			<div className='relative flex min-h-14.25 items-center justify-between'>
 				<SortDropdown
 					selected={sortOption}
@@ -135,7 +152,7 @@ function CatalogBody({
 	if (catalog.anime.length === 0) {
 		return (
 			<div className='py-10 text-center text-aw-subtle'>
-				В каталоге пока ничего нет.
+				Онгоинги не найдены.
 			</div>
 		)
 	}
