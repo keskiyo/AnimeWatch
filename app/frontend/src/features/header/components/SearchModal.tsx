@@ -4,6 +4,7 @@ import type { Anime } from '@/types/anime'
 import { formatAnimeType } from '@/utils/animePageFormatters'
 import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
+import { proxyImage } from '@/utils/imageProxy'
 import { Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -198,7 +199,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 												<div className='relative h-16 w-12 shrink-0 overflow-hidden rounded bg-aw-elevated'>
 													{anime.poster_url ? (
 														<img
-															src={anime.poster_url}
+															src={proxyImage(anime.poster_url)}
 															alt=''
 															className='h-full w-full object-cover'
 															loading='lazy'

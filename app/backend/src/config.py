@@ -2,6 +2,12 @@ from dataclasses import dataclass
 from os import environ
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load backend/.env once at import time (src/config.py → backend/.env).
+# Existing environment variables take precedence (override=False).
+load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -12,6 +18,8 @@ class Settings:
     kodik_endpoint: str
     kodik_api_key: str | None
     frontend_origins: list[str]
+    yummyanime_endpoint: str
+    yummyanime_token: str | None
 
 
 def get_settings() -> Settings:
@@ -33,10 +41,18 @@ def get_settings() -> Settings:
         kodik_endpoint=(
             environ.get("KODIK_ENDPOINT")
             or environ.get("KODIK_API_ENDPOINT")
-            or "https://kodikapi.com"
+            or "https://kodik-api.com"
         ).rstrip("/"),
         kodik_api_key=environ.get("KODIK_API_KEY") or environ.get("KODIK_TOKEN"),
         frontend_origins=_read_origins(),
+        yummyanime_endpoint=(
+            environ.get("YUMMYANIME_API_ENDPOINT") or "https://api.yani.tv"
+        ).rstrip("/"),
+        yummyanime_token=(
+            environ.get("YUMMYANIME_PRIVATE_TOKEN")
+            or environ.get("YUMMYANIME_PUBLIC_TOKEN")
+            or "tlcf42b7vl0e_pde"
+        ),
     )
 
 

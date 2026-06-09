@@ -1,10 +1,11 @@
-import { getAnime, getKodikPlayer } from '@/api/animeApi'
+import { getAnime, getKodikPlayer, getRelated } from '@/api/animeApi'
 import { AnimePageContent } from '@/features/animepage/components/AnimePageContent'
+import { NotFoundPage } from '@/pages/NotFoundPage'
 import type { AnimePageData } from '@/types/animePage'
 import { createAnimePageData } from '@/utils/animePageData'
 import { parseAnimeSlugId } from '@/utils/animeSlug'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 type AnimePageState =
 	| { status: 'loading' }
@@ -27,9 +28,10 @@ export function AnimePage() {
 
 			setState({ status: 'loading' })
 
-			const [anime, player] = await Promise.all([
+			const [anime, player, related] = await Promise.all([
 				getAnime(id),
 				getKodikPlayer(id, 1),
+				getRelated(id),
 			])
 
 			if (isCancelled) return
@@ -38,7 +40,7 @@ export function AnimePage() {
 				anime
 					? {
 							status: 'ready',
-							data: createAnimePageData(anime, player),
+							data: createAnimePageData(anime, player, related),
 						}
 					: { status: 'not-found' },
 			)
@@ -62,33 +64,17 @@ export function AnimePage() {
 	}
 
 	if (state.status === 'not-found') {
-		return <NotFoundState />
+		return (
+			<NotFoundPage
+				title='Аниме не найдено'
+				message='Такого тайтла нет в каталоге или он ещё не загружен.'
+			/>
+		)
 	}
 
 	return (
 		<main>
 			<AnimePageContent data={state.data} />
-		</main>
-	)
-}
-
-function NotFoundState() {
-	return (
-		<main className='mx-auto max-w-345 px-4 py-8'>
-			<section className='rounded-lg bg-aw-surface p-6'>
-				<h1 className='mb-3 text-3xl font-normal text-aw-text'>
-					Аниме не найдено
-				</h1>
-				<p className='mb-5 text-aw-subtle'>
-					Такого тайтла нет в текущем каталоге.
-				</p>
-				<Link
-					to='/anime'
-					className='inline-flex rounded-md bg-aw-accent px-4 py-2 text-sm text-white transition hover:bg-[#ff6d66]'
-				>
-					Вернуться в каталог
-				</Link>
-			</section>
 		</main>
 	)
 }

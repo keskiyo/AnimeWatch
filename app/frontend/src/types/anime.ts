@@ -26,7 +26,16 @@ export type Anime = {
 	url_shikimori?: string
 	url_anilist?: string
 	updated_at: string
-	age_rating: string
+	age_rating?: string
+	next_episode_at?: string | null     // ISO date of the next episode air time (ongoings only)
+	// Extended detail fields — populated only on the anime detail page
+	rating_mpaa?: string                            // "g" | "pg" | "pg_13" | "r" | "r17" | "rx"
+	duration?: number                               // episode duration in minutes
+	source?: string                                 // "manga" | "light_novel" | "original" | …
+	directors?: Array<{ name: string; url: string }>
+	authors?: Array<{ name: string; url: string }>
+	characters?: Array<{ name: string; url: string }>
+	screenshots?: string[]           // Shikimori screenshots (detail page only)
 }
 
 export type AnimeCardProps = {

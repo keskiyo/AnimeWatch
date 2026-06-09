@@ -7,9 +7,13 @@ import type {
 } from '@/types/animePage'
 import {
 	createPlayerBackground,
+	formatAgeRating,
 	formatAnimeType,
+	formatDuration,
 	formatEpisodes,
+	formatRatingMpaa,
 	formatSeason,
+	formatSource,
 	formatStatus,
 	getNextEpisodeText,
 	getPositiveCount,
@@ -29,8 +33,15 @@ export function createAnimePageData(
 		getPositiveCount(anime.episodes_aired) ||
 		getPositiveCount(anime.episodes_total)
 
-	const screenshots = player?.available ? (player.screenshots ?? []) : []
-	const frames: AnimeFrame[] = screenshots.slice(0, 8).map((url, i) => ({
+	// Merge Shikimori screenshots + Kodik screenshots, deduplicated
+	const shikiScreenshots: string[] = anime.screenshots ?? []
+	const kodikScreenshots: string[] =
+		player?.available ? (player.screenshots ?? []) : []
+	const allScreenshots = [
+		...shikiScreenshots,
+		...kodikScreenshots.filter(u => !shikiScreenshots.includes(u)),
+	]
+	const frames: AnimeFrame[] = allScreenshots.slice(0, 20).map((url, i) => ({
 		id: `screenshot-${i}`,
 		label: `Кадр ${i + 1}`,
 		gradient: 'transparent',
@@ -44,7 +55,7 @@ export function createAnimePageData(
 			? [stripBBCode(anime.description)]
 			: [...DEFAULT_DESCRIPTION],
 		nextEpisode: getNextEpisodeText(anime),
-		infoRows: createInfoRows(anime),
+		infoRows: createInfoRows(anime, player),
 		frames,
 		relatedAnime,
 		playerTitle: `Смотреть аниме «${fullTitle}» онлайн`,
@@ -52,51 +63,130 @@ export function createAnimePageData(
 		player,
 		playerTracks: createPlayerTracks(player),
 		playerEpisodes: createPlayerEpisodes(episodesCount),
-		activeEpisodeTitle: 'Серия 1',
-		activeEpisodeDate: anime.updated_at,
+		activeEpisodeTitle: '',
+		// Show the next episode air date only for ongoings with known schedule
+		activeEpisodeDate: anime.status === 'ongoing' && anime.next_episode_at
+			? anime.next_episode_at
+			: '',
 		scheduleRows: [],
 	}
 }
 
-function createInfoRows(anime: Anime): AnimePageData['infoRows'] {
+function createInfoRows(
+	anime: Anime,
+	player?: KodikPlayer,
+): AnimePageData['infoRows'] {
+	const rows: AnimePageData['infoRows'] = []
+
+	// ── Следующий эпизод (only for ongoings) ──────────────────────────────────
+	if (anime.status === 'ongoing') {
+		const nextEp = getNextEpisodeText(anime)
+		if (nextEp) rows.push({ label: 'Следующий эпизод', value: nextEp })
+	}
+
+	// ── Тип и эпизоды ─────────────────────────────────────────────────────────
+	rows.push({ label: 'Тип', value: formatAnimeType(anime.type) })
+	rows.push({ label: 'Эпизоды', value: formatEpisodes(anime) })
+
+	// ── Первоисточник ─────────────────────────────────────────────────────────
+	if (anime.source) {
+		rows.push({ label: 'Первоисточник', value: formatSource(anime.source) })
+	}
+
+	// ── Жанры (clickable) ─────────────────────────────────────────────────────
 	const genreLinks = anime.genres.map(genre => ({
 		label: genre,
 		href: `/anime?genres=${encodeURIComponent(genre)}`,
 	}))
-	const studioLinks = anime.studio
-		? [
-				{
-					label: anime.studio,
-					href: `/studio/${encodeURIComponent(anime.studio)}`,
-				},
-			]
-		: undefined
+	rows.push({
+		label: 'Жанры',
+		value: anime.genres.join(', ') || 'Не указаны',
+		tone: 'accent',
+		links: genreLinks.length > 0 ? genreLinks : undefined,
+	})
 
-	return [
-		{ label: 'Следующий эпизод', value: getNextEpisodeText(anime) },
-		{ label: 'Тип', value: formatAnimeType(anime.type) },
-		{ label: 'Эпизоды', value: formatEpisodes(anime) },
-		{
-			label: 'Жанры',
-			value: anime.genres.join(', ') || 'Не указаны',
-			tone: 'accent',
-			links: genreLinks.length > 0 ? genreLinks : undefined,
-		},
-		{ label: 'Сезон', value: formatSeason(anime), tone: 'accent' },
-		{ label: 'Статус', value: formatStatus(anime.status) },
-		{ label: 'Выпуск', value: String(anime.year) },
-		{ label: 'Возраст', value: '16+', tone: 'badge' },
-		{
+	// ── Сезон ─────────────────────────────────────────────────────────────────
+	rows.push({ label: 'Сезон', value: formatSeason(anime), tone: 'accent' })
+
+	// ── Статус ────────────────────────────────────────────────────────────────
+	rows.push({ label: 'Статус', value: formatStatus(anime.status) })
+
+	// ── Выпуск ────────────────────────────────────────────────────────────────
+	rows.push({ label: 'Выпуск', value: String(anime.year) })
+
+	// ── Рейтинг MPAA (R-17, PG-13, …) ────────────────────────────────────────
+	if (anime.rating_mpaa) {
+		rows.push({ label: 'Рейтинг', value: formatRatingMpaa(anime.rating_mpaa) })
+	}
+
+	// ── Возраст (badge: 0+, 13+, 17+, 18+, …) ────────────────────────────────
+	const ageStr = anime.rating_mpaa
+		? formatAgeRating(anime.rating_mpaa)
+		: (anime.age_rating ?? '')
+	if (ageStr) {
+		rows.push({ label: 'Возраст', value: ageStr, tone: 'badge' })
+	}
+
+	// ── Длительность ──────────────────────────────────────────────────────────
+	if (anime.duration && anime.duration > 0) {
+		rows.push({ label: 'Длительность', value: formatDuration(anime.duration) })
+	}
+
+	// ── Студия (clickable) ────────────────────────────────────────────────────
+	const studioLinks = anime.studio
+		? [{ label: anime.studio, href: `/studio/${encodeURIComponent(anime.studio)}` }]
+		: undefined
+	if (anime.studio) {
+		rows.push({
 			label: 'Студия',
-			value: anime.studio || 'Не указана',
+			value: anime.studio,
 			tone: 'accent',
 			links: studioLinks,
-		},
-		{
-			label: 'Рейтинг',
-			value: anime.rating > 0 ? anime.rating.toFixed(2) : 'Нет оценок',
-		},
-	]
+		})
+	}
+
+	// ── Озвучка (from Kodik player) ───────────────────────────────────────────
+	if (player?.available && player.translation) {
+		rows.push({ label: 'Озвучка', value: player.translation, tone: 'accent' })
+	}
+
+	// ── Оценка Shikimori ──────────────────────────────────────────────────────
+	rows.push({
+		label: 'Оценка',
+		value: anime.rating > 0 ? anime.rating.toFixed(2) : 'Нет оценок',
+	})
+
+	// ── Режиссёр (clickable links to Shikimori) ───────────────────────────────
+	if (anime.directors && anime.directors.length > 0) {
+		rows.push({
+			label: 'Режиссёр',
+			value: anime.directors.map(d => d.name).join(', '),
+			tone: 'accent',
+			links: anime.directors.map(d => ({ label: d.name, href: d.url })),
+		})
+	}
+
+	// ── Автор оригинала ───────────────────────────────────────────────────────
+	if (anime.authors && anime.authors.length > 0) {
+		rows.push({
+			label: 'Автор оригинала',
+			value: anime.authors.map(a => a.name).join(', '),
+			tone: 'accent',
+			links: anime.authors.map(a => ({ label: a.name, href: a.url })),
+		})
+	}
+
+	// ── Главные герои ─────────────────────────────────────────────────────────
+	if (anime.characters && anime.characters.length > 0) {
+		rows.push({
+			label: 'Главные герои',
+			value: anime.characters.map(c => c.name).join(', '),
+			tone: 'accent',
+			links: anime.characters.map(c => ({ label: c.name, href: c.url })),
+		})
+	}
+
+	return rows
 }
 
 function createPlayerTracks(

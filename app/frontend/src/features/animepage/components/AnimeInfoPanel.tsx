@@ -1,10 +1,34 @@
-import type { AnimeInfoRow } from '@/types/animePage'
+import type { AnimeInfoLink, AnimeInfoRow } from '@/types/animePage'
 import { CircleHelp } from 'lucide-react'
 import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 
 type AnimeInfoPanelProps = {
 	rows: AnimeInfoRow[]
+}
+
+const LINK_CLASS =
+	'text-aw-accent no-underline transition-colors hover:text-[#ff8f86] hover:underline'
+
+function InfoLink({ link }: { link: AnimeInfoLink }) {
+	const isExternal = /^https?:\/\//.test(link.href)
+	if (isExternal) {
+		return (
+			<a
+				href={link.href}
+				className={LINK_CLASS}
+				target='_blank'
+				rel='noopener noreferrer'
+			>
+				{link.label}
+			</a>
+		)
+	}
+	return (
+		<Link to={link.href} className={LINK_CLASS}>
+			{link.label}
+		</Link>
+	)
 }
 
 export function AnimeInfoPanel({ rows }: AnimeInfoPanelProps) {
@@ -34,14 +58,9 @@ export function AnimeInfoPanel({ rows }: AnimeInfoPanelProps) {
 					>
 						{row.links ? (
 							row.links.map((link, index) => (
-								<Fragment key={link.href}>
+								<Fragment key={`${link.href}-${index}`}>
 									{index > 0 && ', '}
-									<Link
-										to={link.href}
-										className='text-aw-accent no-underline transition-colors hover:text-[#ff8f86] hover:underline'
-									>
-										{link.label}
-									</Link>
+									<InfoLink link={link} />
 								</Fragment>
 							))
 						) : row.tone === 'badge' ? (

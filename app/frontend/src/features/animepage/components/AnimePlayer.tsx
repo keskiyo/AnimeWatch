@@ -94,18 +94,30 @@ export function AnimePlayer({
 					<div className='mt-4 grid gap-3 text-sm text-aw-text'>
 						{player?.available && (
 							<p className='m-0'>
-								<span className='text-aw-subtle'>Kodik:</span>{' '}
-								{player.translation}, {player.quality}
+								<span className='text-aw-subtle'>Озвучка:</span>{' '}
+								{player.translation}
+								{player.quality && player.quality !== 'auto' && (
+									<span className='ml-1.5 text-aw-subtle'>
+										· {player.quality}
+									</span>
+								)}
 							</p>
 						)}
 						<p className='m-0'>
-							<span className='text-aw-subtle'>Название:</span>{' '}
-							{activeEpisodeTitle}
+							<span className='text-aw-subtle'>Серия:</span>{' '}
+							{activeEpisode}
+							{player?.available && player.episodes_count > 0 && (
+								<span className='text-aw-subtle'>
+									{' '}/ {player.episodes_count}
+								</span>
+							)}
 						</p>
-						<p className='m-0'>
-							<span className='text-aw-subtle'>Дата выхода:</span>{' '}
-							{formattedDate}
-						</p>
+						{formattedDate && (
+							<p className='m-0'>
+								<span className='text-aw-subtle'>Следующий эпизод:</span>{' '}
+								{formattedDate}
+							</p>
+						)}
 					</div>
 				</div>
 

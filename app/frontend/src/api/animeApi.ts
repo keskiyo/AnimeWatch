@@ -84,6 +84,18 @@ export async function getBulkCatalog(): Promise<CatalogResult> {
 	)
 }
 
+export async function getStudioAnime(studioName: string): Promise<CatalogResult> {
+	return withFallback(
+		async () => {
+			const response = await apiClient.get<CatalogResult>(
+				`/studio/${encodeURIComponent(studioName)}/anime`,
+			)
+			return response.data
+		},
+		{ data: [], total: 0, page: 1 },
+	)
+}
+
 export async function getAnime(id: number): Promise<Anime | undefined> {
 	return withFallback<Anime | undefined>(async () => {
 		const response = await apiClient.get<Anime>(`/animes/${id}`)

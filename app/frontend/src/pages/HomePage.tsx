@@ -2,6 +2,7 @@ import { getCatalog } from '@/api/animeApi'
 import type { Anime } from '@/types/anime'
 import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
+import { proxyImage } from '@/utils/imageProxy'
 import {
 	HOME_ADVANTAGES,
 	HOME_FREE_PARAGRAPHS,
@@ -35,6 +36,7 @@ export function HomePage() {
 				page: '1',
 				sort: 'startDate',
 				direction: 'desc',
+				status: 'ongoing',
 			})
 
 			if (!isCancelled) {
@@ -106,7 +108,7 @@ export function HomePage() {
 									</span>
 										<img
 											className='h-62.5 w-full rounded-md bg-aw-surface object-cover aspect-2/3'
-											src={anime.poster_url}
+											src={proxyImage(anime.poster_url)}
 											alt={`${title} постер`}
 											loading='lazy'
 										/>

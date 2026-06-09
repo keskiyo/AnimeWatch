@@ -1,7 +1,15 @@
 import { create } from "zustand";
 import { getSettings, saveSettings } from "@/api/animeApi";
-import { fallbackSettings } from "@/utils/fallbackData";
 import type { AppSettings } from "@/types/anime";
+
+const defaultSettings: AppSettings = {
+  default_player: "auto",
+  default_quality: "auto",
+  default_dubbing: "auto",
+  theme: "dark",
+  notifications_enabled: true,
+  cache_size_limit: 500,
+};
 
 type SettingsState = {
   settings: AppSettings;
@@ -11,7 +19,7 @@ type SettingsState = {
 };
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  settings: fallbackSettings,
+  settings: defaultSettings,
   isLoading: false,
   loadSettings: async () => {
     set({ isLoading: true });

@@ -1,4 +1,5 @@
 import type { Anime } from '@/types/anime'
+import { proxyImage } from '@/utils/imageProxy'
 import { Play } from 'lucide-react'
 
 type AnimePosterActionsProps = {
@@ -12,7 +13,7 @@ export function AnimePosterActions({ anime }: AnimePosterActionsProps) {
 				{anime.poster_url ? (
 					<img
 						className='h-full w-full object-cover'
-						src={anime.poster_url}
+						src={proxyImage(anime.poster_url)}
 						alt={`${anime.title_en} poster`}
 					/>
 				) : (

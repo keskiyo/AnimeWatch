@@ -1,6 +1,7 @@
 import type { CatalogAnimeCardProps, CatalogViewMode } from '@/types/catalog'
 import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
+import { proxyImage } from '@/utils/imageProxy'
 import { Link } from 'react-router-dom'
 
 const CARD_CLASSES: Record<CatalogViewMode, string> = {
@@ -41,7 +42,7 @@ export function AnimeCard({
 				{anime.poster_url ? (
 					<img
 						className='h-full w-full object-cover'
-						src={anime.poster_url}
+						src={proxyImage(anime.poster_url)}
 						alt={`${anime.title_en} poster`}
 						loading='lazy'
 					/>

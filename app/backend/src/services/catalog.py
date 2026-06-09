@@ -1,11 +1,17 @@
 from src.config import get_settings
+from src.logger import get_logger
 from src.models import Anime
-from src.services.mock_data import MOCK_ANIME
 from src.services.shikimori import (
     fetch_shikimori_anime,
+    fetch_shikimori_anime_by_studio,
     fetch_shikimori_bulk_catalog,
     fetch_shikimori_catalog,
+    fetch_shikimori_related,
+    get_cache,
 )
+from src.services.yummyanime import fetch_yummyanime_description
+
+log = get_logger(__name__)
 
 SORTERS: dict[str, object] = {
     "rating": lambda item: float(item.get("rating", 0)),
@@ -21,32 +27,61 @@ async def get_anime_catalog(query: dict[str, str | None]) -> dict:
     try:
         return await fetch_shikimori_catalog(query, get_settings())
     except Exception as error:
-        print(f"Shikimori catalog unavailable, using mock catalog: {error}")
-        return filter_anime_catalog(MOCK_ANIME, query)
+        log.error("catalog fetch: %s", error)
+        raise
 
 
 async def get_bulk_anime_catalog() -> dict:
     """
     Return all anime from 1990+ in one response, sorted: ongoing first → by year desc.
-    Result is cached in SQLite for 24 h — on subsequent page reloads the backend
-    serves from the local DB in milliseconds instead of making N Shikimori requests.
+    SQLite-cached 24 h.
     """
+    items = await fetch_shikimori_bulk_catalog(get_settings())
+    return {"data": items, "total": len(items)}
+
+
+async def get_studio_anime(studio_name: str) -> dict:
+    """Return all anime for a studio, fetched directly from Shikimori (1 h SQLite cache)."""
     try:
-        items = await fetch_shikimori_bulk_catalog(get_settings())
-        return {"data": items, "total": len(items)}
+        items = await fetch_shikimori_anime_by_studio(studio_name, get_settings())
+        return {"data": items, "total": len(items), "studio": studio_name}
     except Exception as error:
-        print(f"Bulk catalog failed, falling back to mock: {error}")
-        # Sort mock: ongoing first
-        sorted_mock = sorted(MOCK_ANIME, key=lambda a: (0 if a.get("status") == "ongoing" else 1, -(a.get("year") or 0)))
-        return {"data": sorted_mock, "total": len(sorted_mock)}
+        log.error("get_studio_anime %r: %s", studio_name, error)
+        return {"data": [], "total": 0, "studio": studio_name}
+
+
+async def get_anime_related(anime_id: int) -> list[dict]:
+    """Return related anime (sequels, prequels, etc.) for *anime_id*."""
+    try:
+        return await fetch_shikimori_related(anime_id, get_settings())
+    except Exception as error:
+        log.warning("related %d: %s", anime_id, error)
+        return []
 
 
 async def get_anime_by_id(anime_id: int) -> Anime | None:
     try:
-        return await fetch_shikimori_anime(anime_id, get_settings())
+        env = get_settings()
+        anime = await fetch_shikimori_anime(anime_id, env)
+        if anime is None:
+            return None
+        # If Shikimori has no description, try YummyAnime as fallback
+        if not (anime.get("description") or "").strip():
+            desc = await fetch_yummyanime_description(
+                shikimori_id=anime["id"],
+                title_ru=anime.get("title_ru") or "",
+                title_en=anime.get("title_en") or "",
+                mal_id=anime.get("mal_id"),
+                endpoint=env.yummyanime_endpoint,
+                token=env.yummyanime_token,
+                cache=get_cache(env),
+            )
+            if desc:
+                anime["description"] = desc  # type: ignore[typeddict-unknown-key]
+        return anime
     except Exception as error:
-        print(f"Shikimori anime details unavailable, using mock catalog: {error}")
-        return next((anime for anime in MOCK_ANIME if anime["id"] == anime_id), None)
+        log.error("anime detail %d: %s", anime_id, error)
+        return None
 
 
 def filter_anime_catalog(anime: list[Anime], query: dict[str, str | None]) -> dict:

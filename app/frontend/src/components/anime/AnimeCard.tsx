@@ -2,6 +2,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { AnimeCardProps } from '@/types/anime'
 import { createAnimeSlug } from '@/utils/animeSlug'
 import { formatProgressLabel, formatRating } from '@/utils/formatters'
+import { proxyImage } from '@/utils/imageProxy'
 import { Heart, Play, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -17,7 +18,7 @@ export function AnimeCard({ anime, progress }: AnimeCardProps) {
 			<div className='relative aspect-2/3 min-h-0 overflow-hidden bg-aw-muted'>
 				<img
 					className='h-full w-full object-cover'
-					src={anime.poster_url}
+					src={proxyImage(anime.poster_url)}
 					alt={`${anime.title_en} poster`}
 					loading='lazy'
 				/>

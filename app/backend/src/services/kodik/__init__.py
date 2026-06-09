@@ -5,6 +5,9 @@ from anime_parsers_ru.parser_kodik_async import KodikParserAsync
 
 from src.config import Settings, get_settings
 from src.db.cache import CacheStore, get_cached_json
+from src.logger import get_logger
+
+log = get_logger(__name__)
 
 
 ALLOWED_PLAYER_HOSTS = {"kodik.info", "kodik.cc", "kodik.biz", "kodik.online", "kodikplayer.com"}
@@ -29,7 +32,8 @@ async def get_kodik_player(anime_id: int, episode_number: int, settings: Setting
             lambda: _fetch_kodik_search(anime_id, env),
         )
         return normalize_kodik_player_result((response.get("results") or [None])[0])
-    except Exception:
+    except Exception as exc:
+        log.error("kodik anime_id=%d: %s", anime_id, exc)
         return unavailable_player("Kodik is temporarily unavailable")
 
 

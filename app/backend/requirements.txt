@@ -4,3 +4,4 @@ httpx==0.28.1
 pydantic==2.12.5
 pytest==9.0.2
 anime-parsers-ru==1.16.2
+python-dotenv==1.0.1

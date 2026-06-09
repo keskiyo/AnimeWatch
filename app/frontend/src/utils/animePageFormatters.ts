@@ -62,6 +62,57 @@ export function getPositiveCount(value: number): number {
 	return Number.isFinite(value) && value > 0 ? Math.round(value) : 0
 }
 
+export function formatRatingMpaa(rating: string): string {
+	const labels: Record<string, string> = {
+		g: 'G',
+		pg: 'PG',
+		pg_13: 'PG-13',
+		r: 'R',
+		r17: 'R-17',
+		rx: 'RX',
+	}
+	return labels[rating] ?? rating.toUpperCase().replace('_', '-')
+}
+
+export function formatAgeRating(rating: string): string {
+	const labels: Record<string, string> = {
+		g: '0+',
+		pg: '6+',
+		pg_13: '13+',
+		r: '16+',
+		r17: '17+',
+		rx: '18+',
+	}
+	return labels[rating] ?? ''
+}
+
+export function formatSource(source: string): string {
+	const labels: Record<string, string> = {
+		manga: 'Манга',
+		light_novel: 'Лёгкий роман',
+		novel: 'Новелла',
+		visual_novel: 'Визуальная новелла',
+		game: 'Игра',
+		original: 'Оригинал',
+		music: 'Музыка',
+		other: 'Другое',
+		'4_koma_manga': '4-кома манга',
+		web_manga: 'Веб-манга',
+		doujinshi: 'Додзинси',
+		book: 'Книга',
+		card_game: 'Карточная игра',
+		picture_book: 'Детская книга',
+		mixed_media: 'Смешанная',
+		radio: 'Радио',
+		web_novel: 'Веб-новелла',
+	}
+	return labels[source] ?? source
+}
+
+export function formatDuration(minutes: number): string {
+	return `${minutes} мин. / серия`
+}
+
 export function stripBBCode(text: string): string {
 	return text
 		.replace(/\[\w+=[^\]]*\]([\s\S]*?)\[\/\w+\]/g, '$1')
