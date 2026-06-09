@@ -55,8 +55,7 @@ export function StudioPage() {
 					{studio || 'Студия'}
 				</h1>
 				<p className='mb-4 text-sm text-aw-subtle'>
-					Аниме студии «{studio}»
-					{isComplete && `: ${results.length}`}
+					Аниме студии «{studio}»{isComplete && `: ${results.length}`}
 				</p>
 				<hr className='mb-7 border-0 border-t border-aw-border' />
 				{!isComplete && anime.length > 0 && (
