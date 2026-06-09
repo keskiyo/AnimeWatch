@@ -59,16 +59,34 @@ export function createAnimePageData(
 }
 
 function createInfoRows(anime: Anime): AnimePageData['infoRows'] {
+	const genreLinks = anime.genres.map(genre => ({
+		label: genre,
+		href: `/anime?genres=${encodeURIComponent(genre)}`,
+	}))
+	const studioLinks = anime.studio
+		? [{ label: anime.studio, href: `/studio/${encodeURIComponent(anime.studio)}` }]
+		: undefined
+
 	return [
 		{ label: 'Следующий эпизод', value: getNextEpisodeText(anime) },
 		{ label: 'Тип', value: formatAnimeType(anime.type) },
 		{ label: 'Эпизоды', value: formatEpisodes(anime) },
-		{ label: 'Жанры', value: anime.genres.join(', ') || 'Не указаны', tone: 'accent' },
+		{
+			label: 'Жанры',
+			value: anime.genres.join(', ') || 'Не указаны',
+			tone: 'accent',
+			links: genreLinks.length > 0 ? genreLinks : undefined,
+		},
 		{ label: 'Сезон', value: formatSeason(anime), tone: 'accent' },
 		{ label: 'Статус', value: formatStatus(anime.status) },
 		{ label: 'Выпуск', value: String(anime.year) },
 		{ label: 'Возраст', value: '16+', tone: 'badge' },
-		{ label: 'Студия', value: anime.studio || 'Не указана', tone: 'accent' },
+		{
+			label: 'Студия',
+			value: anime.studio || 'Не указана',
+			tone: 'accent',
+			links: studioLinks,
+		},
 		{ label: 'Рейтинг', value: anime.rating > 0 ? anime.rating.toFixed(2) : 'Нет оценок' },
 	]
 }

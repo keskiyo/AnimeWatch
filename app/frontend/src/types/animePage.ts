@@ -1,9 +1,15 @@
 import type { Anime, KodikPlayer, RelatedAnime } from '@/types/anime'
 
+export type AnimeInfoLink = {
+	label: string
+	href: string
+}
+
 export type AnimeInfoRow = {
 	label: string
 	value: string
 	tone?: 'default' | 'accent' | 'badge'
+	links?: AnimeInfoLink[]
 }
 
 export type AnimeFrame = {
