@@ -393,3 +393,91 @@ def _season(value: Any) -> str | None:
     if 9 <= month <= 11:
         return "fall"
     return "winter"
+
+
+# ── Bulk catalog (full dataset, SQLite-cached 24h) ────────────────────────────
+
+_BULK_CACHE_KEY = "shikimori:bulk:catalog:v3"
+_BULK_CACHE_TTL = 86400          # 24 hours
+_BULK_PAGE_LIMIT = 50            # Shikimori max per page
+_BULK_MAX_PAGES = 100            # 100 × 50 = up to 5000 anime
+_BULK_BATCH_SIZE = 6             # parallel requests per batch
+_BULK_BATCH_DELAY = 0.4          # seconds between batches (rate limiting)
+_BULK_MIN_YEAR = 1990
+
+
+async def fetch_shikimori_bulk_catalog(settings: Settings | None = None) -> list[Anime]:
+    """
+    Return all anime from {_BULK_MIN_YEAR}+, sorted: ongoing first then by year desc.
+    The result is stored in SQLite for 24 h — subsequent calls return in < 10 ms.
+    On cold start, all pages are fetched from Shikimori in parallel batches.
+    """
+    env = settings or get_settings()
+    cache = _default_cache(env)
+
+    # ── 1. Hot cache path ─────────────────────────────────────────────────────
+    cached = cache.get_json(_BULK_CACHE_KEY)
+    if cached and cached[1]:          # (value, is_fresh)
+        return cached[0]              # type: ignore[return-value]
+
+    # ── 2. Cold path: fetch all pages from Shikimori ─────────────────────────
+    base_params: dict[str, str] = {
+        "limit":    str(_BULK_PAGE_LIMIT),
+        "order":    "aired_on",
+        "status":   "ongoing,released",
+        "censored": "true",
+    }
+
+    all_raw: list[dict[str, Any]] = []
+
+    async def _fetch_page(page: int) -> list[dict[str, Any]]:
+        try:
+            result = await _fetch_json("/api/animes", env, {**base_params, "page": str(page)})
+            return result if isinstance(result, list) else []
+        except Exception as exc:
+            print(f"[bulk] page {page} failed: {exc}")
+            return []
+
+    # First page — determines whether there is more to fetch
+    first = await _fetch_page(1)
+    all_raw.extend(first)
+
+    if len(first) >= _BULK_PAGE_LIMIT:
+        # Fetch remaining pages in parallel batches
+        page = 2
+        while page <= _BULK_MAX_PAGES:
+            pages = list(range(page, min(page + _BULK_BATCH_SIZE, _BULK_MAX_PAGES + 1)))
+            results = await asyncio.gather(*[_fetch_page(p) for p in pages])
+
+            got = 0
+            for r in results:
+                all_raw.extend(r)
+                got += len(r)
+
+            if got < len(pages) * _BULK_PAGE_LIMIT:
+                break           # last batch contained a short page → end of data
+
+            page += _BULK_BATCH_SIZE
+            await asyncio.sleep(_BULK_BATCH_DELAY)
+
+    # ── 3. Normalize, dedup, filter, sort ────────────────────────────────────
+    now_iso = datetime.now(tz=UTC).isoformat()
+    seen: set[int] = set()
+    items: list[Anime] = []
+
+    for raw in all_raw:
+        try:
+            anime = normalize_shikimori_anime(raw, env.shikimori_endpoint, now_iso)
+            if anime["year"] >= _BULK_MIN_YEAR and anime["id"] not in seen:
+                seen.add(anime["id"])
+                items.append(anime)
+        except Exception:
+            continue
+
+    # Ongoing first (by year desc), then released (by year desc)
+    items.sort(key=lambda a: (0 if a["status"] == "ongoing" else 1, -(a.get("year") or 0)))
+
+    # ── 4. Persist to SQLite ──────────────────────────────────────────────────
+    cache.set_json(_BULK_CACHE_KEY, items, _BULK_CACHE_TTL)
+    print(f"[bulk] cached {len(items)} anime for {_BULK_CACHE_TTL // 3600}h")
+    return items

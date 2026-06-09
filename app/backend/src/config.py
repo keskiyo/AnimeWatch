@@ -17,13 +17,24 @@ class Settings:
 def get_settings() -> Settings:
     return Settings(
         database_path=environ.get("DATABASE_PATH", str(Path("data") / "animewatch.sqlite")),
-        cache_ttl=_read_int("CACHE_TTL_SECONDS", 3600),
-        shikimori_endpoint=environ.get("SHIKIMORI_ENDPOINT", "https://shikimori.one").rstrip("/"),
+        # Support both CACHE_TTL_SECONDS (new) and CACHE_TTL (legacy)
+        cache_ttl=_read_int("CACHE_TTL_SECONDS", _read_int("CACHE_TTL", 3600)),
+        # Support both SHIKIMORI_ENDPOINT (new) and SHIKIMORI_BASE_URL (legacy)
+        shikimori_endpoint=(
+            environ.get("SHIKIMORI_ENDPOINT")
+            or environ.get("SHIKIMORI_BASE_URL")
+            or "https://shikimori.one"
+        ).rstrip("/"),
         shikimori_user_agent=environ.get(
             "SHIKIMORI_USER_AGENT",
             "AnimeWatch/0.1 (local development)",
         ),
-        kodik_endpoint=environ.get("KODIK_ENDPOINT", "https://kodikapi.com").rstrip("/"),
+        # Support both KODIK_ENDPOINT (new) and KODIK_API_ENDPOINT (legacy)
+        kodik_endpoint=(
+            environ.get("KODIK_ENDPOINT")
+            or environ.get("KODIK_API_ENDPOINT")
+            or "https://kodikapi.com"
+        ).rstrip("/"),
         kodik_api_key=environ.get("KODIK_API_KEY") or environ.get("KODIK_TOKEN"),
         frontend_origins=_read_origins(),
     )

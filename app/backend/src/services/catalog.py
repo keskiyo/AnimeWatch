@@ -1,7 +1,11 @@
 from src.config import get_settings
 from src.models import Anime
 from src.services.mock_data import MOCK_ANIME
-from src.services.shikimori import fetch_shikimori_anime, fetch_shikimori_catalog
+from src.services.shikimori import (
+    fetch_shikimori_anime,
+    fetch_shikimori_bulk_catalog,
+    fetch_shikimori_catalog,
+)
 
 SORTERS: dict[str, object] = {
     "rating": lambda item: float(item.get("rating", 0)),
@@ -19,6 +23,22 @@ async def get_anime_catalog(query: dict[str, str | None]) -> dict:
     except Exception as error:
         print(f"Shikimori catalog unavailable, using mock catalog: {error}")
         return filter_anime_catalog(MOCK_ANIME, query)
+
+
+async def get_bulk_anime_catalog() -> dict:
+    """
+    Return all anime from 1990+ in one response, sorted: ongoing first → by year desc.
+    Result is cached in SQLite for 24 h — on subsequent page reloads the backend
+    serves from the local DB in milliseconds instead of making N Shikimori requests.
+    """
+    try:
+        items = await fetch_shikimori_bulk_catalog(get_settings())
+        return {"data": items, "total": len(items)}
+    except Exception as error:
+        print(f"Bulk catalog failed, falling back to mock: {error}")
+        # Sort mock: ongoing first
+        sorted_mock = sorted(MOCK_ANIME, key=lambda a: (0 if a.get("status") == "ongoing" else 1, -(a.get("year") or 0)))
+        return {"data": sorted_mock, "total": len(sorted_mock)}
 
 
 async def get_anime_by_id(anime_id: int) -> Anime | None:

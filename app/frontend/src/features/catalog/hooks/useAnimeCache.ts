@@ -1,8 +1,9 @@
-import { getCatalog } from '@/api/animeApi'
+import { getBulkCatalog, getCatalog } from '@/api/animeApi'
 import type { Anime } from '@/types/anime'
 import { useEffect, useState } from 'react'
 
-// Module-level cache — persists for the lifetime of the page session
+// Module-level cache — persists for the JS session (cleared on full page reload,
+// but the BACKEND caches for 24 h in SQLite so the reload is always fast).
 let cachedAnime: Anime[] = []
 let cacheTotal = 0
 let cacheComplete = false
@@ -34,7 +35,7 @@ export function useAnimeCache(): AnimeCacheInfo {
 	useEffect(() => {
 		if (!cacheStarted) {
 			cacheStarted = true
-			void loadAllAnime()
+			void loadAnimeCache()
 		}
 	}, [])
 
@@ -46,13 +47,65 @@ export function useAnimeCache(): AnimeCacheInfo {
 	}
 }
 
-async function loadAllAnime() {
-	// The backend caps page size at 50 and returns a synthetic `total` that
-	// only signals "is there a next page", not the real count. So we ignore
-	// `total` entirely and paginate until a page comes back short/empty.
+async function loadAnimeCache() {
+	// Step 1 — load 12 ongoings immediately for instant first render
+	try {
+		const initial = await getCatalog({
+			status: 'ongoing',
+			limit: '12',
+			page: '1',
+			sort: 'startDate',
+			direction: 'desc',
+		})
+		if (initial.data.length > 0) {
+			const seenIds = new Set(initial.data.map(a => a.id))
+			cachedAnime = [...initial.data]
+			cacheTotal = 0
+			notify()
+
+			// Step 2 — load full bulk catalog from backend (SQLite-cached 24 h)
+			// This single request replaces the old N-page pagination loop.
+			try {
+				const bulk = await getBulkCatalog()
+				// Merge: bulk result is authoritative; prepend any ongoings not in it
+				const bulkIds = new Set(bulk.data.map(a => a.id))
+				const ongoingExtras = initial.data.filter(a => !bulkIds.has(a.id))
+				cachedAnime = [...ongoingExtras, ...bulk.data]
+				cacheTotal = cachedAnime.length
+			} catch (bulkErr) {
+				console.warn('Bulk catalog failed, keeping initial ongoings:', bulkErr)
+				// Fall back to paginated load if bulk endpoint unavailable
+				await loadPaginated(seenIds)
+			}
+		} else {
+			// No ongoings — go straight to bulk
+			await loadBulkOrPaginated()
+		}
+	} catch (err) {
+		console.warn('Initial ongoings load failed:', err)
+		await loadBulkOrPaginated()
+	}
+
+	cacheComplete = true
+	notify()
+}
+
+async function loadBulkOrPaginated() {
+	try {
+		const bulk = await getBulkCatalog()
+		cachedAnime = bulk.data
+		cacheTotal = bulk.total
+	} catch {
+		// Absolute fallback: old paginated approach
+		await loadPaginated(new Set())
+	}
+}
+
+// Legacy paginated fallback (used only if /anime/bulk is unavailable)
+async function loadPaginated(seenIds: Set<number>) {
 	const LIMIT = 50
 	const BATCH = 8
-	const MAX_PAGES = 60 // safety cap (~3000 titles) to avoid hammering Shikimori
+	const MAX_PAGES = 80
 
 	function fetchPage(page: number) {
 		return getCatalog({
@@ -63,38 +116,26 @@ async function loadAllAnime() {
 		})
 	}
 
-	const seenIds = new Set<number>()
-
 	function append(items: Anime[]): number {
 		let added = 0
 		for (const item of items) {
 			if (seenIds.has(item.id)) continue
 			seenIds.add(item.id)
 			cachedAnime = [...cachedAnime, item]
-			added += 1
+			added++
 		}
 		return added
 	}
 
 	try {
 		const first = await fetchPage(1)
-		if (first.data.length === 0) {
-			cacheComplete = true
-			notify()
-			return
-		}
+		if (first.data.length === 0) return
 
 		const pageSize = first.data.length
 		append(first.data)
-		cacheTotal = 0
 		notify()
 
-		// Short first page means there is nothing more to load
-		if (first.data.length < LIMIT) {
-			cacheComplete = true
-			notify()
-			return
-		}
+		if (first.data.length < LIMIT) return
 
 		let reachedEnd = false
 		for (let p = 2; p <= MAX_PAGES && !reachedEnd; p += BATCH) {
@@ -102,23 +143,17 @@ async function loadAllAnime() {
 				{ length: Math.min(BATCH, MAX_PAGES - p + 1) },
 				(_, i) => p + i,
 			)
-
 			const results = await Promise.all(pages.map(fetchPage))
 
-			let batchAdded = 0
+			let added = 0
 			for (const r of results) {
-				batchAdded += append(r.data)
-				// A page shorter than the requested size is the last page
+				added += append(r.data)
 				if (r.data.length < pageSize) reachedEnd = true
 			}
-
 			notify()
-			if (batchAdded === 0) break
+			if (added === 0) break
 		}
 	} catch (err) {
-		console.warn('Cache load failed:', err)
+		console.warn('Paginated fallback failed:', err)
 	}
-
-	cacheComplete = true
-	notify()
 }

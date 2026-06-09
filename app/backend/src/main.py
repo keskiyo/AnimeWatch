@@ -4,7 +4,7 @@ from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import get_settings
-from src.services.catalog import get_anime_by_id, get_anime_catalog
+from src.services.catalog import get_anime_by_id, get_anime_catalog, get_bulk_anime_catalog
 from src.services.content import (
     get_aniboom_player,
     get_episodes_for_anime,
@@ -56,6 +56,12 @@ async def anime_catalog(
     limit: str | None = "24",
 ) -> dict:
     return await get_anime_catalog(locals())
+
+
+@app.get("/api/anime/bulk")
+async def anime_bulk() -> dict:
+    """All anime from 1990+, sorted: ongoing first → year desc. SQLite-cached 24 h."""
+    return await get_bulk_anime_catalog()
 
 
 @app.get("/api/animes/{anime_id}")
