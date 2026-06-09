@@ -1,4 +1,4 @@
-import type { Anime, KodikPlayer } from '@/types/anime'
+import type { Anime, KodikPlayer, RelatedAnime } from '@/types/anime'
 
 export type AnimeInfoRow = {
 	label: string
@@ -38,6 +38,7 @@ export type AnimePageData = {
 	nextEpisode: string
 	infoRows: AnimeInfoRow[]
 	frames: AnimeFrame[]
+	relatedAnime: RelatedAnime[]
 	playerTitle: string
 	playerGradient: string
 	player?: KodikPlayer

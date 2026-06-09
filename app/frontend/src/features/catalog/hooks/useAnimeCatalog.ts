@@ -4,6 +4,15 @@ import type { CatalogViewMode, SortDirection, SortOption } from '@/types/catalog
 import { CATALOG_VIEW_MODES } from '@/utils/catalogData'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+export type CatalogFilters = {
+	type?: string
+	status?: string
+	year_from?: string
+	year_to?: string
+	genres?: string
+	age_rating?: string
+}
+
 export type AnimeCatalogState = {
 	anime: Anime[]
 	error?: string
@@ -17,6 +26,7 @@ export function useAnimeCatalog(
 	viewMode: CatalogViewMode,
 	sortOption: SortOption,
 	sortDirection: SortDirection,
+	filters?: CatalogFilters,
 ): AnimeCatalogState {
 	const [isLoadingMore, setIsLoadingMore] = useState(false)
 	const [isInitialLoading, setIsInitialLoading] = useState(true)
@@ -31,6 +41,7 @@ export function useAnimeCatalog(
 		[viewMode],
 	)
 	const hasMore = anime.length < total
+	const filtersKey = JSON.stringify(filters ?? null)
 
 	useEffect(() => {
 		let isCancelled = false
@@ -44,7 +55,8 @@ export function useAnimeCatalog(
 					page: '1',
 					limit: String(viewLimit),
 					sort: getSortParam(sortOption),
-					order: sortDirection,
+					direction: sortDirection,
+					...(filters ?? {}),
 				})
 
 				if (isCancelled) return
@@ -68,7 +80,8 @@ export function useAnimeCatalog(
 		return () => {
 			isCancelled = true
 		}
-	}, [sortDirection, sortOption, viewLimit])
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [sortDirection, sortOption, viewLimit, filtersKey])
 
 	const loadMore = useCallback(async () => {
 		if (isLoadingMore || !hasMore) return
@@ -81,7 +94,8 @@ export function useAnimeCatalog(
 				page: String(nextPage),
 				limit: String(viewLimit),
 				sort: getSortParam(sortOption),
-				order: sortDirection,
+				direction: sortDirection,
+				...(filters ?? {}),
 			})
 
 			setAnime(current => [...current, ...result.data])
@@ -90,7 +104,8 @@ export function useAnimeCatalog(
 		} finally {
 			setIsLoadingMore(false)
 		}
-	}, [hasMore, isLoadingMore, page, sortDirection, sortOption, viewLimit])
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [hasMore, isLoadingMore, page, sortDirection, sortOption, viewLimit, filtersKey])
 
 	return {
 		anime,
@@ -103,13 +118,7 @@ export function useAnimeCatalog(
 }
 
 function getSortParam(option: SortOption): string {
-	if (option === 'рейтингу') {
-		return 'rating'
-	}
-
-	if (option === 'дате добавления') {
-		return 'date'
-	}
-
-	return 'novelty'
+	if (option === 'рейтингу') return 'rating'
+	if (option === 'дате добавления') return 'createdAt'
+	return 'startDate'
 }

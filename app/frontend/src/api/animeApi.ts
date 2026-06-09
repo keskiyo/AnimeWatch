@@ -6,6 +6,7 @@ import type {
 	CatalogResult,
 	Episode,
 	KodikPlayer,
+	RelatedAnime,
 	ScheduleEntry,
 	WatchlistEntry,
 	WatchlistStatus,
@@ -13,15 +14,17 @@ import type {
 
 export type CatalogParams = {
 	search?: string
-	genre?: string
+	genres?: string
 	status?: string
-	year?: string
+	year_from?: string
+	year_to?: string
 	season?: string
 	type?: string
 	sort?: string
-	order?: 'asc' | 'desc'
+	direction?: 'asc' | 'desc'
 	page?: string
 	limit?: string
+	age_rating?: string
 }
 
 function shouldUseFallback() {
@@ -76,6 +79,15 @@ export async function getAnime(id: number): Promise<Anime | undefined> {
 		const response = await apiClient.get<Anime>(`/animes/${id}`)
 		return response.data
 	}, undefined)
+}
+
+export async function getRelated(id: number): Promise<RelatedAnime[]> {
+	return withFallback(async () => {
+		const response = await apiClient.get<RelatedAnime[]>(
+			`/animes/${id}/related`,
+		)
+		return response.data
+	}, [])
 }
 
 export async function getEpisodes(id: number): Promise<Episode[]> {

@@ -1,58 +1,108 @@
 import { NumberInput } from '@/components/ui/NumberInput'
-import {
-	createEmptyCatalogFilterState,
-	filterGroups,
-} from '@/utils/catalogData'
+import { filterGroups } from '@/utils/catalogData'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CheckboxGroup } from './CheckboxGroup'
 import { GenreDropdown } from './GenreDropdown'
 
+const CURRENT_YEAR = new Date().getFullYear()
+
 export function FilterSidebar() {
-	const [checked, setChecked] = useState(
-		() => createEmptyCatalogFilterState().checked,
-	)
-	const [checkedGenres, setCheckedGenres] = useState(
-		() => createEmptyCatalogFilterState().checkedGenres,
-	)
-	const [isStrictMatch, setIsStrictMatch] = useState(
-		() => createEmptyCatalogFilterState().isStrictMatch,
-	)
-	const [fromYear, setFromYear] = useState(1959)
-	const [toYear, setToYear] = useState(2026)
+	const [searchParams, setSearchParams] = useSearchParams()
 	const [resetKey, setResetKey] = useState(0)
 
+	const checked = new Set(
+		searchParams.get('f')?.split(',').filter(Boolean) ?? [],
+	)
+	const checkedGenres = new Set(
+		searchParams.get('genres')?.split(',').filter(Boolean) ?? [],
+	)
+	const isStrictMatch = searchParams.get('strict') === '1'
+	const fromYear = Number(searchParams.get('fromYear') ?? '1980')
+	const toYear = Number(searchParams.get('toYear') ?? CURRENT_YEAR)
+
 	function onToggle(value: string) {
-		setChecked(current => {
-			const next = new Set(current)
-			if (next.has(value)) {
-				next.delete(value)
-			} else {
-				next.add(value)
-			}
-			return next
-		})
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				const current = new Set(
+					next.get('f')?.split(',').filter(Boolean) ?? [],
+				)
+				if (current.has(value)) current.delete(value)
+				else current.add(value)
+				if (current.size > 0) next.set('f', [...current].join(','))
+				else next.delete('f')
+				return next
+			},
+			{ replace: true },
+		)
 	}
 
 	function onToggleGenre(value: string) {
-		setCheckedGenres(current => {
-			const next = new Set(current)
-			if (next.has(value)) {
-				next.delete(value)
-			} else {
-				next.add(value)
-			}
-			return next
-		})
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				const current = new Set(
+					next.get('genres')?.split(',').filter(Boolean) ?? [],
+				)
+				if (current.has(value)) current.delete(value)
+				else current.add(value)
+				if (current.size > 0) next.set('genres', [...current].join(','))
+				else next.delete('genres')
+				return next
+			},
+			{ replace: true },
+		)
+	}
+
+	function onToggleStrictMatch() {
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				if (next.get('strict') === '1') next.delete('strict')
+				else next.set('strict', '1')
+				return next
+			},
+			{ replace: true },
+		)
+	}
+
+	function onFromYearChange(year: number) {
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				next.set('fromYear', String(year))
+				return next
+			},
+			{ replace: true },
+		)
+	}
+
+	function onToYearChange(year: number) {
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				next.set('toYear', String(year))
+				return next
+			},
+			{ replace: true },
+		)
 	}
 
 	function onClickResetFilters() {
-		const emptyState = createEmptyCatalogFilterState()
-		setChecked(emptyState.checked)
-		setCheckedGenres(emptyState.checkedGenres)
-		setIsStrictMatch(emptyState.isStrictMatch)
-		setFromYear(1959)
-		setToYear(2026)
-		setResetKey(value => value + 1)
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				next.delete('f')
+				next.delete('genres')
+				next.delete('strict')
+				next.delete('fromYear')
+				next.delete('toYear')
+				return next
+			},
+			{ replace: true },
+		)
+		setResetKey(k => k + 1)
 	}
 
 	return (
@@ -75,7 +125,7 @@ export function FilterSidebar() {
 					min={1959}
 					max={toYear}
 					aria-label='Год от'
-					onChange={event => setFromYear(Number(event.target.value))}
+					onChange={event => onFromYearChange(Number(event.target.value))}
 				/>
 				<NumberInput
 					className='h-9 w-27.5 rounded-full border-0 bg-[#343638] px-3 text-[#c5cbd1]'
@@ -83,7 +133,7 @@ export function FilterSidebar() {
 					value={toYear}
 					min={fromYear}
 					aria-label='Год до'
-					onChange={event => setToYear(Number(event.target.value))}
+					onChange={event => onToYearChange(Number(event.target.value))}
 				/>
 			</div>
 			<GenreDropdown
@@ -91,7 +141,7 @@ export function FilterSidebar() {
 				isStrictMatch={isStrictMatch}
 				resetKey={resetKey}
 				onToggleGenre={onToggleGenre}
-				onToggleStrictMatch={() => setIsStrictMatch(value => !value)}
+				onToggleStrictMatch={onToggleStrictMatch}
 			/>
 			{filterGroups.map(group => (
 				<CheckboxGroup

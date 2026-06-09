@@ -7,6 +7,13 @@ export function CatalogOngoingPage() {
 	const [isFilterOpen, setIsFilterOpen] = useState(false)
 
 	useEffect(() => {
+		document.title = 'Онгоинги — AnimeWatch'
+		setMetaDescription(
+			'Список текущих онгоингов. Смотрите новые серии аниме в хорошем качестве на AnimeWatch.',
+		)
+	}, [])
+
+	useEffect(() => {
 		document.body.style.overflow = isFilterOpen ? 'hidden' : ''
 
 		return () => {
@@ -64,4 +71,16 @@ export function CatalogOngoingPage() {
 			</aside>
 		</main>
 	)
+}
+
+function setMetaDescription(content: string) {
+	let meta = document.querySelector<HTMLMetaElement>(
+		'meta[name="description"]',
+	)
+	if (!meta) {
+		meta = document.createElement('meta')
+		meta.name = 'description'
+		document.head.appendChild(meta)
+	}
+	meta.content = content
 }

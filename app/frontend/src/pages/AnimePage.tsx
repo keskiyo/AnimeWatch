@@ -1,4 +1,4 @@
-import { getAnime, getKodikPlayer } from '@/api/animeApi'
+import { getAnime, getKodikPlayer, getRelated } from '@/api/animeApi'
 import { AnimePageContent } from '@/features/animepage/components/AnimePageContent'
 import type { AnimePageData } from '@/types/animePage'
 import { createAnimePageData } from '@/utils/animePageData'
@@ -27,16 +27,20 @@ export function AnimePage() {
 
 			setState({ status: 'loading' })
 
-			const [anime, player] = await Promise.all([
+			const [anime, player, relatedAnime] = await Promise.all([
 				getAnime(id),
 				getKodikPlayer(id, 1),
+				getRelated(id),
 			])
 
 			if (isCancelled) return
 
 			setState(
 				anime
-					? { status: 'ready', data: createAnimePageData(anime, player) }
+					? {
+							status: 'ready',
+							data: createAnimePageData(anime, player, relatedAnime),
+						}
 					: { status: 'not-found' },
 			)
 		}
@@ -47,6 +51,19 @@ export function AnimePage() {
 			isCancelled = true
 		}
 	}, [id])
+
+	useEffect(() => {
+		if (state.status === 'ready') {
+			const title =
+				state.data.anime.title_ru || state.data.anime.title_en
+			document.title = `${title} — смотреть онлайн | AnimeWatch`
+			setMetaDescription(
+				`Смотреть аниме «${title}» онлайн бесплатно на AnimeWatch. Все серии в хорошем качестве.`,
+			)
+		} else if (state.status === 'loading') {
+			document.title = 'Загрузка... | AnimeWatch'
+		}
+	}, [state])
 
 	if (state.status === 'loading') {
 		return (
@@ -88,4 +105,16 @@ function NotFoundState() {
 			</section>
 		</main>
 	)
+}
+
+function setMetaDescription(content: string) {
+	let meta = document.querySelector<HTMLMetaElement>(
+		'meta[name="description"]',
+	)
+	if (!meta) {
+		meta = document.createElement('meta')
+		meta.name = 'description'
+		document.head.appendChild(meta)
+	}
+	meta.content = content
 }

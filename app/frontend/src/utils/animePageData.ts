@@ -1,4 +1,4 @@
-import type { Anime, KodikPlayer } from '@/types/anime'
+import type { Anime, KodikPlayer, RelatedAnime } from '@/types/anime'
 import type {
 	AnimePageData,
 	AnimePlayerEpisode,
@@ -13,6 +13,7 @@ import {
 	getNextEpisodeText,
 	getPositiveCount,
 	normalizeAnimeTitle,
+	stripBBCode,
 } from '@/utils/animePageFormatters'
 import {
 	ANIME_PAGE_FRAMES,
@@ -23,6 +24,7 @@ import {
 export function createAnimePageData(
 	anime: Anime,
 	player?: KodikPlayer,
+	relatedAnime: RelatedAnime[] = [],
 ): AnimePageData {
 	const fullTitle = normalizeAnimeTitle(anime.title_ru || anime.title_en)
 	const episodesCount =
@@ -33,10 +35,13 @@ export function createAnimePageData(
 	return {
 		anime,
 		fullTitle,
-		description: anime.description ? [anime.description] : [...DEFAULT_DESCRIPTION],
+		description: anime.description
+			? [stripBBCode(anime.description)]
+			: [...DEFAULT_DESCRIPTION],
 		nextEpisode: getNextEpisodeText(anime),
 		infoRows: createInfoRows(anime),
 		frames: ANIME_PAGE_FRAMES,
+		relatedAnime,
 		playerTitle: `Смотреть аниме «${fullTitle}» онлайн`,
 		playerGradient: createPlayerBackground(anime.poster_url),
 		player,
