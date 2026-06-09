@@ -7,6 +7,13 @@ export function CatalogPage() {
 	const [isFilterOpen, setIsFilterOpen] = useState(false)
 
 	useEffect(() => {
+		document.title = 'Каталог аниме — AnimeWatch'
+		setMetaDescription(
+			'Полный каталог аниме. Сортировка по рейтингу, новизне и дате добавления. Фильтры по жанрам, типу, году и статусу.',
+		)
+	}, [])
+
+	useEffect(() => {
 		document.body.style.overflow = isFilterOpen ? 'hidden' : ''
 
 		return () => {
@@ -64,4 +71,16 @@ export function CatalogPage() {
 			</aside>
 		</main>
 	)
+}
+
+function setMetaDescription(content: string) {
+	let meta = document.querySelector<HTMLMetaElement>(
+		'meta[name="description"]',
+	)
+	if (!meta) {
+		meta = document.createElement('meta')
+		meta.name = 'description'
+		document.head.appendChild(meta)
+	}
+	meta.content = content
 }

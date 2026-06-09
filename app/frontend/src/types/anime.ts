@@ -81,6 +81,17 @@ export type AppSettings = {
 	cache_size_limit: number
 }
 
+export type RelatedAnime = {
+	id: number
+	relation: string
+	title_ru: string
+	title_en: string
+	poster_url: string
+	type: AnimeType
+	year: number
+	rating: number
+}
+
 export type AppNotification = {
 	id: string
 	anime_id: number

@@ -1,15 +1,22 @@
-import type { Anime, KodikPlayer } from '@/types/anime'
+import type { Anime, KodikPlayer, RelatedAnime } from '@/types/anime'
+
+export type AnimeInfoLink = {
+	label: string
+	href: string
+}
 
 export type AnimeInfoRow = {
 	label: string
 	value: string
 	tone?: 'default' | 'accent' | 'badge'
+	links?: AnimeInfoLink[]
 }
 
 export type AnimeFrame = {
 	id: string
 	label: string
 	gradient: string
+	imageUrl?: string
 }
 
 export type AnimePlayerTrack = {
@@ -43,6 +50,7 @@ export type AnimePageData = {
 	nextEpisode: string
 	infoRows: AnimeInfoRow[]
 	frames: AnimeFrame[]
+	relatedAnime: RelatedAnime[]
 	playerTitle: string
 	playerGradient: string
 	player?: KodikPlayer

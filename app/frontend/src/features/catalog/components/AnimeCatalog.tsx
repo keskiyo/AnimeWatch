@@ -2,38 +2,63 @@ import { CatalogBody } from '@/features/catalog/components/CatalogBody'
 import { CatalogIntro } from '@/features/catalog/components/CatalogIntro'
 import { ViewModeButtons } from '@/features/catalog/components/ViewModeButtons'
 import { useAnimeCatalog } from '@/features/catalog/hooks/useAnimeCatalog'
-import { useCatalogFilters } from '@/features/catalog/hooks/useCatalogFilters'
-import { LoadMore } from '@/features/components/LoadMore'
-import type { CatalogViewMode } from '@/types/catalog'
+import type {
+	CatalogViewMode,
+	SortDirection,
+	SortOption,
+} from '@/types/catalog'
 import {
 	CATALOG_INTRO_COLLAPSED,
 	CATALOG_INTRO_EXPANDED,
+	parseClientFilters,
 } from '@/utils/catalogData'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { AnimeCard } from './AnimeCard'
 import { SortDropdown } from './SortDropdown'
 
 export function AnimeCatalog() {
+	const [searchParams, setSearchParams] = useSearchParams()
 	const [viewMode, setViewMode] = useState<CatalogViewMode>('poster')
 	const [isIntroExpanded, setIsIntroExpanded] = useState(false)
 	const [isAutoLoadEnabled, setIsAutoLoadEnabled] = useState(false)
 	const loadMoreRef = useRef<HTMLDivElement>(null)
+	const sortOption = (searchParams.get('sort') as SortOption) ?? 'новизне'
+	const sortDirection =
+		(searchParams.get('direction') as SortDirection) ?? 'desc'
+	const filters = useMemo(
+		() => parseClientFilters(searchParams),
+		[searchParams],
+	)
 
-	const { params, sortOption, sortDirection, filterKey, setSort } =
-		useCatalogFilters()
-
-	const catalog = useAnimeCatalog(viewMode, params, filterKey)
-
+	const catalog = useAnimeCatalog(
+		viewMode,
+		sortOption,
+		sortDirection,
+		filters,
+	)
 	const introParagraphs = isIntroExpanded
 		? CATALOG_INTRO_EXPANDED
 		: CATALOG_INTRO_COLLAPSED
 
 	function toggleSortOption(option: typeof sortOption) {
 		setIsAutoLoadEnabled(false)
-		if (option === sortOption) {
-			setSort(option, sortDirection === 'desc' ? 'asc' : 'desc')
-			return
-		}
-		setSort(option, 'desc')
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				if (option === sortOption) {
+					next.set(
+						'direction',
+						sortDirection === 'desc' ? 'asc' : 'desc',
+					)
+				} else {
+					next.set('sort', option)
+					next.set('direction', 'desc')
+				}
+				return next
+			},
+			{ replace: true },
+		)
 	}
 
 	const onClickLoadMore = useCallback(() => {
@@ -89,6 +114,15 @@ export function AnimeCatalog() {
 				paragraphs={introParagraphs}
 			/>
 			<hr className='mt-4 border-0 border-t border-aw-border' />
+			{!catalog.cacheComplete && catalog.cacheLoaded > 0 && (
+				<div className='py-1.5 text-xs text-aw-subtle'>
+					Загружено {catalog.cacheLoaded}
+					{catalog.cacheTotal > 0
+						? ` / ${catalog.cacheTotal}`
+						: ''}{' '}
+					аниме...
+				</div>
+			)}
 			<div className='relative flex min-h-14.25 items-center justify-between'>
 				<SortDropdown
 					selected={sortOption}
@@ -112,5 +146,45 @@ export function AnimeCatalog() {
 				/>
 			</div>
 		</section>
+	)
+}
+
+function CatalogBody({
+	viewMode,
+	catalog,
+}: {
+	viewMode: CatalogViewMode
+	catalog: ReturnType<typeof useAnimeCatalog>
+}) {
+	if (catalog.isInitialLoading) {
+		return (
+			<div className='py-10 text-center text-aw-subtle'>
+				Загрузка каталога...
+			</div>
+		)
+	}
+
+	if (catalog.error) {
+		return (
+			<div className='py-10 text-center text-aw-subtle'>
+				{catalog.error}
+			</div>
+		)
+	}
+
+	if (catalog.anime.length === 0) {
+		return (
+			<div className='py-10 text-center text-aw-subtle'>
+				Ничего не найдено по заданным фильтрам.
+			</div>
+		)
+	}
+
+	return (
+		<div className={GRID_CLASSES[viewMode]}>
+			{catalog.anime.map(anime => (
+				<AnimeCard key={anime.id} anime={anime} variant={viewMode} />
+			))}
+		</div>
 	)
 }

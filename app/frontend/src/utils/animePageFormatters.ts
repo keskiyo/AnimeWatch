@@ -61,3 +61,11 @@ export function createPlayerBackground(posterUrl: string): string {
 export function getPositiveCount(value: number): number {
 	return Number.isFinite(value) && value > 0 ? Math.round(value) : 0
 }
+
+export function stripBBCode(text: string): string {
+	return text
+		.replace(/\[\w+=[^\]]*\]([\s\S]*?)\[\/\w+\]/g, '$1')
+		.replace(/\[\w+\]([\s\S]*?)\[\/\w+\]/g, '$1')
+		.replace(/\[\/?\w+[^\]]*\]/g, '')
+		.trim()
+}

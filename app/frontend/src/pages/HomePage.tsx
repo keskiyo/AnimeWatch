@@ -1,6 +1,6 @@
 import { getCatalog } from '@/api/animeApi'
 import type { Anime } from '@/types/anime'
-import { formatAnimeRating } from '@/utils/animeRating'
+import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
 import {
 	HOME_ADVANTAGES,
@@ -19,6 +19,13 @@ export function HomePage() {
 	const [isLoading, setIsLoading] = useState(true)
 
 	useEffect(() => {
+		document.title = 'AnimeWatch — смотреть аниме онлайн бесплатно'
+		setMetaDescription(
+			'Смотрите аниме онлайн бесплатно без регистрации. Большой каталог: сериалы, фильмы, OVA. Удобный поиск по жанрам и рейтингу.',
+		)
+	}, [])
+
+	useEffect(() => {
 		let isCancelled = false
 
 		async function loadHomeAnime() {
@@ -26,8 +33,8 @@ export function HomePage() {
 			const result = await getCatalog({
 				limit: '12',
 				page: '1',
-				sort: 'novelty',
-				order: 'desc',
+				sort: 'startDate',
+				direction: 'desc',
 			})
 
 			if (!isCancelled) {
@@ -92,9 +99,11 @@ export function HomePage() {
 										aria-label={title}
 										className='relative grid min-w-0 no-underline'
 									>
-										<span className='absolute left-0 top-2 z-1 min-w-10.5 rounded bg-[#2fc244] px-2 py-1.5 text-center text-[15px] font-bold leading-none text-white'>
-											{formatAnimeRating(anime.rating)}
-										</span>
+										<span
+										className={`absolute left-0 top-2 z-1 min-w-10.5 rounded px-2 py-1.5 text-center text-[15px] font-bold leading-none ${getAnimeRatingColor(anime.rating)}`}
+									>
+										{formatAnimeRating(anime.rating)}
+									</span>
 										<img
 											className='h-62.5 w-full rounded-md bg-aw-surface object-cover aspect-2/3'
 											src={anime.poster_url}
@@ -173,4 +182,16 @@ export function HomePage() {
 			</article>
 		</main>
 	)
+}
+
+function setMetaDescription(content: string) {
+	let meta = document.querySelector<HTMLMetaElement>(
+		'meta[name="description"]',
+	)
+	if (!meta) {
+		meta = document.createElement('meta')
+		meta.name = 'description'
+		document.head.appendChild(meta)
+	}
+	meta.content = content
 }

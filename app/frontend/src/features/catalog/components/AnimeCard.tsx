@@ -1,5 +1,5 @@
 import type { CatalogAnimeCardProps, CatalogViewMode } from '@/types/catalog'
-import { formatAnimeRating } from '@/utils/animeRating'
+import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
 import { Link } from 'react-router-dom'
 
@@ -33,7 +33,9 @@ export function AnimeCard({
 			<div
 				className={`group relative row-span-4 flex aspect-3/4 w-full items-end justify-center overflow-hidden rounded-md bg-aw-elevated transition-transform hover:-translate-y-0.5 hover:saturate-[1.08] ${POSTER_CLASSES[variant]}`}
 			>
-				<span className='absolute left-0 top-2 z-2 min-w-10.5 rounded bg-[#2fc244] px-2 py-1.5 text-center text-[15px] font-bold leading-none text-white'>
+				<span
+					className={`absolute left-0 top-2 z-2 min-w-10.5 rounded px-2 py-1.5 text-center text-[15px] font-bold leading-none ${getAnimeRatingColor(anime.rating)}`}
+				>
 					{formatAnimeRating(anime.rating)}
 				</span>
 				{anime.poster_url ? (

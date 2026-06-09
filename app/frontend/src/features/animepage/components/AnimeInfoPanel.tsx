@@ -1,5 +1,7 @@
 import type { AnimeInfoRow } from '@/types/animePage'
 import { CircleHelp } from 'lucide-react'
+import { Fragment } from 'react'
+import { Link } from 'react-router-dom'
 
 type AnimeInfoPanelProps = {
 	rows: AnimeInfoRow[]
@@ -30,7 +32,19 @@ export function AnimeInfoPanel({ rows }: AnimeInfoPanelProps) {
 								: 'text-aw-text'
 						}`}
 					>
-						{row.tone === 'badge' ? (
+						{row.links ? (
+							row.links.map((link, index) => (
+								<Fragment key={link.href}>
+									{index > 0 && ', '}
+									<Link
+										to={link.href}
+										className='text-aw-accent no-underline transition-colors hover:text-[#ff8f86] hover:underline'
+									>
+										{link.label}
+									</Link>
+								</Fragment>
+							))
+						) : row.tone === 'badge' ? (
 							<span className='rounded bg-white px-1.5 py-1 text-sm font-bold leading-none text-black'>
 								{row.value}
 							</span>

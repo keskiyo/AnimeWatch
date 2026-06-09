@@ -1,56 +1,107 @@
 import { NumberInput } from '@/components/ui/NumberInput'
-import { useCatalogFilters } from '@/features/catalog/hooks/useCatalogFilters'
 import { filterGroups } from '@/utils/catalogData'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CheckboxGroup } from './CheckboxGroup'
 import { GenreDropdown } from './GenreDropdown'
 
+const CURRENT_YEAR = new Date().getFullYear()
+
 export function FilterSidebar() {
-	const {
-		params,
-		checkedSet,
-		checkedGenres,
-		toggleCheckbox,
-		toggleGenre,
-		toggleStrictMatch,
-		setYearFrom,
-		setYearTo,
-		resetFilters,
-	} = useCatalogFilters()
-
-	const [localYearFrom, setLocalYearFrom] = useState(params.yearFrom)
-	const [localYearTo, setLocalYearTo] = useState(params.yearTo)
-
-	const prevYearFromRef = useRef(params.yearFrom)
-	const prevYearToRef = useRef(params.yearTo)
-	useEffect(() => {
-		if (params.yearFrom !== prevYearFromRef.current) {
-			setLocalYearFrom(params.yearFrom)
-			prevYearFromRef.current = params.yearFrom
-		}
-	}, [params.yearFrom])
-	useEffect(() => {
-		if (params.yearTo !== prevYearToRef.current) {
-			setLocalYearTo(params.yearTo)
-			prevYearToRef.current = params.yearTo
-		}
-	}, [params.yearTo])
-
-	useEffect(() => {
-		const timer = setTimeout(() => setYearFrom(localYearFrom), 500)
-		return () => clearTimeout(timer)
-	}, [localYearFrom, setYearFrom])
-	useEffect(() => {
-		const timer = setTimeout(() => setYearTo(localYearTo), 500)
-		return () => clearTimeout(timer)
-	}, [localYearTo, setYearTo])
-
+	const [searchParams, setSearchParams] = useSearchParams()
 	const [resetKey, setResetKey] = useState(0)
 
+	const checked = new Set(
+		searchParams.get('f')?.split(',').filter(Boolean) ?? [],
+	)
+	const checkedGenres = new Set(
+		searchParams.get('genres')?.split(',').filter(Boolean) ?? [],
+	)
+	const isStrictMatch = searchParams.get('strict') === '1'
+	const fromYear = Number(searchParams.get('fromYear') ?? '1980')
+	const toYear = Number(searchParams.get('toYear') ?? CURRENT_YEAR)
+
+	function onToggle(value: string) {
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				const current = new Set(
+					next.get('f')?.split(',').filter(Boolean) ?? [],
+				)
+				if (current.has(value)) current.delete(value)
+				else current.add(value)
+				if (current.size > 0) next.set('f', [...current].join(','))
+				else next.delete('f')
+				return next
+			},
+			{ replace: true },
+		)
+	}
+
+	function onToggleGenre(value: string) {
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				const current = new Set(
+					next.get('genres')?.split(',').filter(Boolean) ?? [],
+				)
+				if (current.has(value)) current.delete(value)
+				else current.add(value)
+				if (current.size > 0) next.set('genres', [...current].join(','))
+				else next.delete('genres')
+				return next
+			},
+			{ replace: true },
+		)
+	}
+
+	function onToggleStrictMatch() {
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				if (next.get('strict') === '1') next.delete('strict')
+				else next.set('strict', '1')
+				return next
+			},
+			{ replace: true },
+		)
+	}
+
+	function onFromYearChange(year: number) {
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				next.set('fromYear', String(year))
+				return next
+			},
+			{ replace: true },
+		)
+	}
+
+	function onToYearChange(year: number) {
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				next.set('toYear', String(year))
+				return next
+			},
+			{ replace: true },
+		)
+	}
+
 	function onClickResetFilters() {
-		resetFilters()
-		setLocalYearFrom(1959)
-		setLocalYearTo(new Date().getFullYear())
+		setSearchParams(
+			prev => {
+				const next = new URLSearchParams(prev)
+				next.delete('f')
+				next.delete('genres')
+				next.delete('strict')
+				next.delete('fromYear')
+				next.delete('toYear')
+				return next
+			},
+			{ replace: true },
+		)
 		setResetKey(k => k + 1)
 	}
 
@@ -75,7 +126,7 @@ export function FilterSidebar() {
 					max={localYearTo}
 					aria-label='Год от'
 					onChange={event =>
-						setLocalYearFrom(Number(event.target.value))
+						onFromYearChange(Number(event.target.value))
 					}
 				/>
 				<NumberInput
@@ -85,7 +136,7 @@ export function FilterSidebar() {
 					min={localYearFrom}
 					aria-label='Год до'
 					onChange={event =>
-						setLocalYearTo(Number(event.target.value))
+						onToYearChange(Number(event.target.value))
 					}
 				/>
 			</div>
@@ -93,8 +144,8 @@ export function FilterSidebar() {
 				checked={checkedGenres}
 				isStrictMatch={params.strictMatch}
 				resetKey={resetKey}
-				onToggleGenre={toggleGenre}
-				onToggleStrictMatch={toggleStrictMatch}
+				onToggleGenre={onToggleGenre}
+				onToggleStrictMatch={onToggleStrictMatch}
 			/>
 			{filterGroups.map(group => (
 				<CheckboxGroup

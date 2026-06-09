@@ -50,6 +50,17 @@ export type CatalogFilterState = {
 export type SortOption = 'дате добавления' | 'новизне' | 'рейтингу'
 export type SortDirection = 'asc' | 'desc'
 
+export type ClientFilters = {
+	types: Set<string>
+	statuses: Set<string>
+	ageRatings: Set<string>
+	episodeCounts: Set<string>
+	genres: Set<string>
+	isStrictMatch: boolean
+	fromYear: number
+	toYear: number
+}
+
 export type SortDropdownProps = {
 	selected: SortOption
 	sortDirection: SortDirection

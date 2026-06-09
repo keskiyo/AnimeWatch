@@ -9,21 +9,24 @@ type AnimePageHeroProps = {
 
 export function AnimePageHero({ data }: AnimePageHeroProps) {
 	const rating = data.anime.rating
-	const ratingLabel = rating > 0 ? rating.toFixed(2) : null
+	const hasRating = rating > 0
 
 	return (
 		<section className='rounded-lg bg-aw-surface px-4 py-5'>
 			<div className='mb-3 flex items-start gap-8 max-[760px]:gap-4'>
-				<div className='flex items-center gap-4 text-xs text-aw-text'>
+				<div className='flex items-center gap-3 text-xs text-aw-text'>
 					<Star
 						size={32}
-						fill='#f5d124'
-						className='text-[#f5d124]'
+						fill={hasRating ? '#f5d124' : 'transparent'}
+						strokeWidth={hasRating ? 0 : 1.5}
+						className={
+							hasRating ? 'text-[#f5d124]' : 'text-aw-subtle'
+						}
 						aria-hidden='true'
 					/>
-					{ratingLabel ? (
-						<span className='font-semibold leading-none text-aw-text text-[25px]'>
-							{ratingLabel}
+					{hasRating ? (
+						<span className='text-lg font-bold leading-tight text-aw-text'>
+							{rating.toFixed(2)}
 						</span>
 					) : (
 						<span className='leading-tight text-aw-subtle'>
