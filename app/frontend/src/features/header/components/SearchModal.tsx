@@ -1,8 +1,8 @@
 import { getCatalog } from '@/api/animeApi'
 import { useAnimeCache } from '@/features/catalog/hooks/useAnimeCache'
 import type { Anime } from '@/types/anime'
-import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { formatAnimeType } from '@/utils/animePageFormatters'
+import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
 import { Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -13,6 +13,9 @@ interface SearchModalProps {
 	onClose: () => void
 }
 
+const MIN_QUERY_LENGTH = 2
+const MAX_RESULTS = 12
+
 function normalize(str: string): string {
 	return str
 		.toLowerCase()
@@ -21,16 +24,26 @@ function normalize(str: string): string {
 		.trim()
 }
 
-function searchInList(anime: Anime[], query: string): Anime[] {
+function searchInCache(anime: Anime[], query: string): Anime[] {
 	const q = normalize(query)
-	if (q.length < 2) return []
-	return anime
-		.filter(
-			item =>
-				normalize(item.title_ru).includes(q) ||
-				normalize(item.title_en).includes(q),
-		)
-		.slice(0, 10)
+	if (q.length < MIN_QUERY_LENGTH) return []
+	return anime.filter(
+		item =>
+			normalize(item.title_ru).includes(q) ||
+			normalize(item.title_en).includes(q),
+	)
+}
+
+function mergeResults(primary: Anime[], secondary: Anime[]): Anime[] {
+	const seen = new Set<number>()
+	const merged: Anime[] = []
+	for (const item of [...primary, ...secondary]) {
+		if (seen.has(item.id)) continue
+		seen.add(item.id)
+		merged.push(item)
+		if (merged.length >= MAX_RESULTS) break
+	}
+	return merged
 }
 
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
@@ -39,49 +52,64 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 	const [isApiLoading, setIsApiLoading] = useState(false)
 	const { anime: cachedAnime } = useAnimeCache()
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const requestIdRef = useRef(0)
 
+	const trimmedQuery = query.trim()
+	const showResults = normalize(trimmedQuery).length >= MIN_QUERY_LENGTH
+
+	// Instant client-side preview from the (partial) cache
 	const cacheResults = useMemo(
-		() => searchInList(cachedAnime, query),
-		[cachedAnime, query],
+		() => searchInCache(cachedAnime, trimmedQuery),
+		[cachedAnime, trimmedQuery],
 	)
 
-	const showResults = normalize(query).length >= 2
-	const results = cachedAnime.length > 0 ? cacheResults : apiResults
-	const isLoading = isApiLoading && cachedAnime.length === 0
+	// Show API results first (more complete via Shikimori), then cache extras
+	const results = useMemo(
+		() => mergeResults(apiResults, cacheResults),
+		[apiResults, cacheResults],
+	)
 
-	// API fallback when cache is still empty
+	// Always query the backend search (debounced) — the cache only holds a
+	// partial set, so it can't be the source of truth for search.
 	useEffect(() => {
-		if (cachedAnime.length > 0) return
 		if (!showResults) {
 			setApiResults([])
+			setIsApiLoading(false)
 			return
 		}
 
+		setIsApiLoading(true)
 		if (debounceRef.current) clearTimeout(debounceRef.current)
+
+		const requestId = ++requestIdRef.current
 		debounceRef.current = setTimeout(async () => {
-			setIsApiLoading(true)
 			try {
 				const res = await getCatalog({
-					search: query.trim(),
-					limit: '10',
+					search: trimmedQuery,
+					limit: String(MAX_RESULTS),
 					page: '1',
 				})
-				setApiResults(res.data.slice(0, 10))
+				if (requestId === requestIdRef.current) {
+					setApiResults(res.data.slice(0, MAX_RESULTS))
+				}
 			} finally {
-				setIsApiLoading(false)
+				if (requestId === requestIdRef.current) {
+					setIsApiLoading(false)
+				}
 			}
-		}, 350)
+		}, 300)
 
 		return () => {
 			if (debounceRef.current) clearTimeout(debounceRef.current)
 		}
-	}, [cachedAnime.length, query, showResults])
+	}, [trimmedQuery, showResults])
 
 	// Reset state when modal closes
 	useEffect(() => {
 		if (!isOpen) {
 			setQuery('')
 			setApiResults([])
+			setIsApiLoading(false)
 		}
 	}, [isOpen])
 
@@ -101,6 +129,8 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 	}, [isOpen, onClose])
 
 	if (!isOpen) return null
+
+	const isLoading = isApiLoading && results.length === 0
 
 	return (
 		<div className='fixed inset-0 z-50 bg-aw-surface animate-slideUpFade'>
