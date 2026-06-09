@@ -1,4 +1,3 @@
-import { CatalogFilterParams } from '@/features/catalog/hooks/useCatalogFilters'
 import type { Anime } from '@/types/anime'
 import type {
 	CatalogViewMode,
@@ -7,7 +6,7 @@ import type {
 	SortOption,
 } from '@/types/catalog'
 import { CATALOG_VIEW_MODES } from '@/utils/catalogData'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAnimeCache } from './useAnimeCache'
 
 export type AnimeCatalogState = {
@@ -28,15 +27,12 @@ export function useAnimeCatalog(
 	sortDirection: SortDirection,
 	filters?: ClientFilters,
 ): AnimeCatalogState {
-	const {
-		anime: allAnime,
-		total: cacheTotal,
-		isComplete,
-		isLoading,
-	} = useAnimeCache()
+	const { anime: allAnime, total: cacheTotal, isComplete, isLoading } =
+		useAnimeCache()
 
 	const pageSize = useMemo(
-		() => CATALOG_VIEW_MODES.find(m => m.id === viewMode)?.limit ?? 12,
+		() =>
+			CATALOG_VIEW_MODES.find(m => m.id === viewMode)?.limit ?? 12,
 		[viewMode],
 	)
 
@@ -63,11 +59,6 @@ export function useAnimeCatalog(
 		].join(',')
 	}, [filters, sortOption, sortDirection])
 
-	// Ref so loadMore always reads current params without being in its dep array
-	const paramsRef = useRef(params)
-	paramsRef.current = params
-
-	// Reset and reload first page whenever filters or viewLimit change
 	useEffect(() => {
 		setDisplayCount(pageSize)
 	}, [resetKey, pageSize])
@@ -76,6 +67,7 @@ export function useAnimeCatalog(
 		const filtered = filters ? applyFilters(allAnime, filters) : allAnime
 		return applySort(filtered, sortOption, sortDirection)
 	}, [allAnime, filters, sortOption, sortDirection])
+
 	const displayed = processed.slice(0, displayCount)
 	const hasMore = displayCount < processed.length
 
@@ -83,14 +75,6 @@ export function useAnimeCatalog(
 		setDisplayCount(prev => prev + pageSize)
 	}, [pageSize])
 
-	return { anime, error, isInitialLoading, isLoadingMore, hasMore, loadMore }
-}
-
-function buildApiParams(
-	params: CatalogFilterParams,
-	page: string,
-	limit: string,
-) {
 	return {
 		anime: displayed,
 		isInitialLoading: allAnime.length === 0 && isLoading,
@@ -106,16 +90,7 @@ function buildApiParams(
 // ─── Client-side filtering ──────────────────────────────────────────────────
 
 function applyFilters(anime: Anime[], f: ClientFilters): Anime[] {
-	const {
-		types,
-		statuses,
-		ageRatings,
-		episodeCounts,
-		genres,
-		isStrictMatch,
-		fromYear,
-		toYear,
-	} = f
+	const { types, statuses, ageRatings, episodeCounts, genres, isStrictMatch, fromYear, toYear } = f
 
 	return anime.filter(item => {
 		// Type
@@ -124,9 +99,7 @@ function applyFilters(anime: Anime[], f: ClientFilters): Anime[] {
 		// Status (special-case "recent" = released in last 6 months)
 		if (statuses.size > 0) {
 			const includeRecent = statuses.has('recent')
-			const directStatuses = new Set(
-				[...statuses].filter(s => s !== 'recent'),
-			)
+			const directStatuses = new Set([...statuses].filter(s => s !== 'recent'))
 
 			let ok = directStatuses.size > 0 && directStatuses.has(item.status)
 			if (!ok && includeRecent) {
@@ -144,8 +117,7 @@ function applyFilters(anime: Anime[], f: ClientFilters): Anime[] {
 		if (genres.size > 0) {
 			const itemGenres = item.genres
 			if (isStrictMatch) {
-				if (![...genres].every(g => itemGenres.includes(g)))
-					return false
+				if (![...genres].every(g => itemGenres.includes(g))) return false
 			} else {
 				if (!itemGenres.some(g => genres.has(g))) return false
 			}
@@ -153,10 +125,7 @@ function applyFilters(anime: Anime[], f: ClientFilters): Anime[] {
 
 		// Episode count
 		if (episodeCounts.size > 0) {
-			const ep =
-				item.episodes_total > 0
-					? item.episodes_total
-					: item.episodes_aired
+			const ep = item.episodes_total > 0 ? item.episodes_total : item.episodes_aired
 			let ok = false
 			if (episodeCounts.has('Короткие') && ep > 0 && ep <= 4) ok = true
 			if (episodeCounts.has('Средние') && ep >= 5 && ep <= 16) ok = true
@@ -177,11 +146,7 @@ function applyFilters(anime: Anime[], f: ClientFilters): Anime[] {
 
 // ─── Client-side sorting ────────────────────────────────────────────────────
 
-function applySort(
-	anime: Anime[],
-	option: SortOption,
-	direction: SortDirection,
-): Anime[] {
+function applySort(anime: Anime[], option: SortOption, direction: SortDirection): Anime[] {
 	return [...anime].sort((a, b) => {
 		let cmp = 0
 

@@ -121,28 +121,24 @@ export function FilterSidebar() {
 				<NumberInput
 					className='h-9 w-27.5 rounded-full border-0 bg-[#343638] px-3 text-[#c5cbd1]'
 					wrapperClassName='w-[110px]'
-					value={localYearFrom}
+					value={fromYear}
 					min={1959}
-					max={localYearTo}
+					max={toYear}
 					aria-label='Год от'
-					onChange={event =>
-						onFromYearChange(Number(event.target.value))
-					}
+					onChange={event => onFromYearChange(Number(event.target.value))}
 				/>
 				<NumberInput
 					className='h-9 w-27.5 rounded-full border-0 bg-[#343638] px-3 text-[#c5cbd1]'
 					wrapperClassName='w-[110px]'
-					value={localYearTo}
-					min={localYearFrom}
+					value={toYear}
+					min={fromYear}
 					aria-label='Год до'
-					onChange={event =>
-						onToYearChange(Number(event.target.value))
-					}
+					onChange={event => onToYearChange(Number(event.target.value))}
 				/>
 			</div>
 			<GenreDropdown
 				checked={checkedGenres}
-				isStrictMatch={params.strictMatch}
+				isStrictMatch={isStrictMatch}
 				resetKey={resetKey}
 				onToggleGenre={onToggleGenre}
 				onToggleStrictMatch={onToggleStrictMatch}
@@ -151,8 +147,8 @@ export function FilterSidebar() {
 				<CheckboxGroup
 					key={group.title}
 					group={group}
-					checked={checkedSet}
-					onToggle={toggleCheckbox}
+					checked={checked}
+					onToggle={onToggle}
 				/>
 			))}
 		</aside>
