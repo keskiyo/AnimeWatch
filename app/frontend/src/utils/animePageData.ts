@@ -33,7 +33,9 @@ export function createAnimePageData(
 	return {
 		anime,
 		fullTitle,
-		description: anime.description ? [anime.description] : [...DEFAULT_DESCRIPTION],
+		description: anime.description
+			? [anime.description]
+			: [...DEFAULT_DESCRIPTION],
 		nextEpisode: getNextEpisodeText(anime),
 		infoRows: createInfoRows(anime),
 		frames: ANIME_PAGE_FRAMES,
@@ -53,17 +55,34 @@ function createInfoRows(anime: Anime): AnimePageData['infoRows'] {
 		{ label: 'Следующий эпизод', value: getNextEpisodeText(anime) },
 		{ label: 'Тип', value: formatAnimeType(anime.type) },
 		{ label: 'Эпизоды', value: formatEpisodes(anime) },
-		{ label: 'Жанры', value: anime.genres.join(', ') || 'Не указаны', tone: 'accent' },
+		{
+			label: 'Жанры',
+			value: anime.genres.join(', ') || 'Не указаны',
+			tone: 'accent',
+		},
 		{ label: 'Сезон', value: formatSeason(anime), tone: 'accent' },
 		{ label: 'Статус', value: formatStatus(anime.status) },
 		{ label: 'Выпуск', value: String(anime.year) },
-		{ label: 'Возраст', value: '16+', tone: 'badge' },
-		{ label: 'Студия', value: anime.studio || 'Не указана', tone: 'accent' },
-		{ label: 'Рейтинг', value: anime.rating > 0 ? anime.rating.toFixed(2) : 'Нет оценок' },
+		{
+			label: 'Возраст',
+			value: anime.age_rating ?? 'Не указан',
+			tone: 'badge',
+		},
+		{
+			label: 'Студия',
+			value: anime.studio || 'Не указана',
+			tone: 'accent',
+		},
+		{
+			label: 'Рейтинг',
+			value: anime.rating > 0 ? anime.rating.toFixed(2) : 'Нет оценок',
+		},
 	]
 }
 
-function createPlayerTracks(player: KodikPlayer | undefined): AnimePlayerTrack[] {
+function createPlayerTracks(
+	player: KodikPlayer | undefined,
+): AnimePlayerTrack[] {
 	if (player?.available) {
 		return [{ id: 'kodik', label: player.translation, isActive: true }]
 	}

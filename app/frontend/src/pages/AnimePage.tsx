@@ -36,7 +36,10 @@ export function AnimePage() {
 
 			setState(
 				anime
-					? { status: 'ready', data: createAnimePageData(anime, player) }
+					? {
+							status: 'ready',
+							data: createAnimePageData(anime, player),
+						}
 					: { status: 'not-found' },
 			)
 		}

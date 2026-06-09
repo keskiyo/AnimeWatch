@@ -31,6 +31,11 @@ export type AnimeScheduleRow = {
 	status: 'released' | 'soon'
 }
 
+export type PlayerProvider = {
+	id: string
+	label: string
+}
+
 export type AnimePageData = {
 	anime: Anime
 	fullTitle: string
@@ -46,4 +51,6 @@ export type AnimePageData = {
 	activeEpisodeTitle: string
 	activeEpisodeDate: string
 	scheduleRows: AnimeScheduleRow[]
+	ageRating?: string | number | null
+	playerProviders?: PlayerProvider[]
 }

@@ -26,6 +26,7 @@ export type Anime = {
 	url_shikimori?: string
 	url_anilist?: string
 	updated_at: string
+	age_rating: string
 }
 
 export type AnimeCardProps = {

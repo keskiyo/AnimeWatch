@@ -8,6 +8,9 @@ type AnimePageHeroProps = {
 }
 
 export function AnimePageHero({ data }: AnimePageHeroProps) {
+	const rating = data.anime.rating
+	const ratingLabel = rating > 0 ? rating.toFixed(2) : null
+
 	return (
 		<section className='rounded-lg bg-aw-surface px-4 py-5'>
 			<div className='mb-3 flex items-start gap-8 max-[760px]:gap-4'>
@@ -18,11 +21,17 @@ export function AnimePageHero({ data }: AnimePageHeroProps) {
 						className='text-[#f5d124]'
 						aria-hidden='true'
 					/>
-					<span className='leading-tight'>
-						Нет
-						<br />
-						оценок
-					</span>
+					{ratingLabel ? (
+						<span className='font-semibold leading-none text-aw-text text-[25px]'>
+							{ratingLabel}
+						</span>
+					) : (
+						<span className='leading-tight text-aw-subtle'>
+							Нет
+							<br />
+							оценок
+						</span>
+					)}
 				</div>
 			</div>
 			<h1 className='mb-5 max-w-7xl text-[clamp(32px,4vw,40px)] font-normal leading-tight text-aw-text'>

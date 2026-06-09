@@ -22,6 +22,9 @@ export type CatalogParams = {
 	order?: 'asc' | 'desc'
 	page?: string
 	limit?: string
+	yearFrom?: string
+	yearTo?: string
+	strict?: string
 }
 
 function shouldUseFallback() {

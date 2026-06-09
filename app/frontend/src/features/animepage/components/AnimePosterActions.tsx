@@ -1,5 +1,5 @@
 import type { Anime } from '@/types/anime'
-import { ChevronDown, ListPlus, Play } from 'lucide-react'
+import { Play } from 'lucide-react'
 
 type AnimePosterActionsProps = {
 	anime: Anime
@@ -37,16 +37,6 @@ export function AnimePosterActions({ anime }: AnimePosterActionsProps) {
 					<span>
 						{anime.episodes_aired} / {anime.episodes_total || '?'}
 					</span>
-				</button>
-				<button
-					type='button'
-					className='grid h-9 grid-cols-[1fr_auto] items-center rounded-md bg-[#e9eef3] px-3 text-sm text-aw-bg transition hover:bg-white'
-				>
-					<span className='inline-flex items-center gap-2'>
-						<ListPlus size={17} aria-hidden='true' />
-						Добавить в список
-					</span>
-					<ChevronDown size={15} aria-hidden='true' />
 				</button>
 			</div>
 		</div>

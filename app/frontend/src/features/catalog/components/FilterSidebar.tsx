@@ -1,58 +1,57 @@
 import { NumberInput } from '@/components/ui/NumberInput'
-import {
-	createEmptyCatalogFilterState,
-	filterGroups,
-} from '@/utils/catalogData'
-import { useState } from 'react'
+import { useCatalogFilters } from '@/features/catalog/hooks/useCatalogFilters'
+import { filterGroups } from '@/utils/catalogData'
+import { useEffect, useRef, useState } from 'react'
 import { CheckboxGroup } from './CheckboxGroup'
 import { GenreDropdown } from './GenreDropdown'
 
 export function FilterSidebar() {
-	const [checked, setChecked] = useState(
-		() => createEmptyCatalogFilterState().checked,
-	)
-	const [checkedGenres, setCheckedGenres] = useState(
-		() => createEmptyCatalogFilterState().checkedGenres,
-	)
-	const [isStrictMatch, setIsStrictMatch] = useState(
-		() => createEmptyCatalogFilterState().isStrictMatch,
-	)
-	const [fromYear, setFromYear] = useState(1959)
-	const [toYear, setToYear] = useState(2026)
+	const {
+		params,
+		checkedSet,
+		checkedGenres,
+		toggleCheckbox,
+		toggleGenre,
+		toggleStrictMatch,
+		setYearFrom,
+		setYearTo,
+		resetFilters,
+	} = useCatalogFilters()
+
+	const [localYearFrom, setLocalYearFrom] = useState(params.yearFrom)
+	const [localYearTo, setLocalYearTo] = useState(params.yearTo)
+
+	const prevYearFromRef = useRef(params.yearFrom)
+	const prevYearToRef = useRef(params.yearTo)
+	useEffect(() => {
+		if (params.yearFrom !== prevYearFromRef.current) {
+			setLocalYearFrom(params.yearFrom)
+			prevYearFromRef.current = params.yearFrom
+		}
+	}, [params.yearFrom])
+	useEffect(() => {
+		if (params.yearTo !== prevYearToRef.current) {
+			setLocalYearTo(params.yearTo)
+			prevYearToRef.current = params.yearTo
+		}
+	}, [params.yearTo])
+
+	useEffect(() => {
+		const timer = setTimeout(() => setYearFrom(localYearFrom), 500)
+		return () => clearTimeout(timer)
+	}, [localYearFrom, setYearFrom])
+	useEffect(() => {
+		const timer = setTimeout(() => setYearTo(localYearTo), 500)
+		return () => clearTimeout(timer)
+	}, [localYearTo, setYearTo])
+
 	const [resetKey, setResetKey] = useState(0)
 
-	function onToggle(value: string) {
-		setChecked(current => {
-			const next = new Set(current)
-			if (next.has(value)) {
-				next.delete(value)
-			} else {
-				next.add(value)
-			}
-			return next
-		})
-	}
-
-	function onToggleGenre(value: string) {
-		setCheckedGenres(current => {
-			const next = new Set(current)
-			if (next.has(value)) {
-				next.delete(value)
-			} else {
-				next.add(value)
-			}
-			return next
-		})
-	}
-
 	function onClickResetFilters() {
-		const emptyState = createEmptyCatalogFilterState()
-		setChecked(emptyState.checked)
-		setCheckedGenres(emptyState.checkedGenres)
-		setIsStrictMatch(emptyState.isStrictMatch)
-		setFromYear(1959)
-		setToYear(2026)
-		setResetKey(value => value + 1)
+		resetFilters()
+		setLocalYearFrom(1959)
+		setLocalYearTo(new Date().getFullYear())
+		setResetKey(k => k + 1)
 	}
 
 	return (
@@ -71,34 +70,38 @@ export function FilterSidebar() {
 				<NumberInput
 					className='h-9 w-27.5 rounded-full border-0 bg-[#343638] px-3 text-[#c5cbd1]'
 					wrapperClassName='w-[110px]'
-					value={fromYear}
+					value={localYearFrom}
 					min={1959}
-					max={toYear}
+					max={localYearTo}
 					aria-label='Год от'
-					onChange={event => setFromYear(Number(event.target.value))}
+					onChange={event =>
+						setLocalYearFrom(Number(event.target.value))
+					}
 				/>
 				<NumberInput
 					className='h-9 w-27.5 rounded-full border-0 bg-[#343638] px-3 text-[#c5cbd1]'
 					wrapperClassName='w-[110px]'
-					value={toYear}
-					min={fromYear}
+					value={localYearTo}
+					min={localYearFrom}
 					aria-label='Год до'
-					onChange={event => setToYear(Number(event.target.value))}
+					onChange={event =>
+						setLocalYearTo(Number(event.target.value))
+					}
 				/>
 			</div>
 			<GenreDropdown
 				checked={checkedGenres}
-				isStrictMatch={isStrictMatch}
+				isStrictMatch={params.strictMatch}
 				resetKey={resetKey}
-				onToggleGenre={onToggleGenre}
-				onToggleStrictMatch={() => setIsStrictMatch(value => !value)}
+				onToggleGenre={toggleGenre}
+				onToggleStrictMatch={toggleStrictMatch}
 			/>
 			{filterGroups.map(group => (
 				<CheckboxGroup
 					key={group.title}
 					group={group}
-					checked={checked}
-					onToggle={onToggle}
+					checked={checkedSet}
+					onToggle={toggleCheckbox}
 				/>
 			))}
 		</aside>
