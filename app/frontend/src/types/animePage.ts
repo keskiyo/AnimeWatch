@@ -10,6 +10,7 @@ export type AnimeFrame = {
 	id: string
 	label: string
 	gradient: string
+	imageUrl?: string
 }
 
 export type AnimePlayerTrack = {

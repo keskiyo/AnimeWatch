@@ -24,7 +24,9 @@ export function AnimePageContent({ data }: AnimePageContentProps) {
 				activeEpisodeTitle={data.activeEpisodeTitle}
 				activeEpisodeDate={data.activeEpisodeDate}
 			/>
-			<EpisodeSchedule rows={data.scheduleRows} />
+			{data.scheduleRows.length > 0 && (
+				<EpisodeSchedule rows={data.scheduleRows} />
+			)}
 		</div>
 	)
 }

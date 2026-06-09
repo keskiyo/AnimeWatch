@@ -1,5 +1,6 @@
 import type { Anime, KodikPlayer, RelatedAnime } from '@/types/anime'
 import type {
+	AnimeFrame,
 	AnimePageData,
 	AnimePlayerEpisode,
 	AnimePlayerTrack,
@@ -15,11 +16,7 @@ import {
 	normalizeAnimeTitle,
 	stripBBCode,
 } from '@/utils/animePageFormatters'
-import {
-	ANIME_PAGE_FRAMES,
-	ANIME_PAGE_SCHEDULE_ROWS,
-	DEFAULT_DESCRIPTION,
-} from '@/utils/animePageStaticData'
+import { DEFAULT_DESCRIPTION } from '@/utils/animePageStaticData'
 
 export function createAnimePageData(
 	anime: Anime,
@@ -32,6 +29,14 @@ export function createAnimePageData(
 		getPositiveCount(anime.episodes_aired) ||
 		getPositiveCount(anime.episodes_total)
 
+	const screenshots = player?.available ? (player.screenshots ?? []) : []
+	const frames: AnimeFrame[] = screenshots.slice(0, 8).map((url, i) => ({
+		id: `screenshot-${i}`,
+		label: `Кадр ${i + 1}`,
+		gradient: 'transparent',
+		imageUrl: url,
+	}))
+
 	return {
 		anime,
 		fullTitle,
@@ -40,7 +45,7 @@ export function createAnimePageData(
 			: [...DEFAULT_DESCRIPTION],
 		nextEpisode: getNextEpisodeText(anime),
 		infoRows: createInfoRows(anime),
-		frames: ANIME_PAGE_FRAMES,
+		frames,
 		relatedAnime,
 		playerTitle: `Смотреть аниме «${fullTitle}» онлайн`,
 		playerGradient: createPlayerBackground(anime.poster_url),
@@ -49,7 +54,7 @@ export function createAnimePageData(
 		playerEpisodes: createPlayerEpisodes(episodesCount),
 		activeEpisodeTitle: 'Серия 1',
 		activeEpisodeDate: anime.updated_at,
-		scheduleRows: ANIME_PAGE_SCHEDULE_ROWS,
+		scheduleRows: [],
 	}
 }
 
