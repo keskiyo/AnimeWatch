@@ -1,7 +1,8 @@
-import { CatalogBody } from '@/features/catalog/components/CatalogBody'
 import { CatalogIntro } from '@/features/catalog/components/CatalogIntro'
+import { CatalogBody } from '@/features/catalog/components/CatalogBody'
 import { ViewModeButtons } from '@/features/catalog/components/ViewModeButtons'
 import { useAnimeCatalog } from '@/features/catalog/hooks/useAnimeCatalog'
+import { LoadMore } from '@/features/components/LoadMore'
 import type {
 	CatalogViewMode,
 	SortDirection,
@@ -14,7 +15,6 @@ import {
 } from '@/utils/catalogData'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AnimeCard } from './AnimeCard'
 import { SortDropdown } from './SortDropdown'
 
 export function AnimeCatalog() {
@@ -104,7 +104,7 @@ export function AnimeCatalog() {
 
 	useEffect(() => {
 		setIsAutoLoadEnabled(false)
-	}, [filterKey])
+	}, [filters])
 
 	return (
 		<section className='min-w-0 rounded-lg bg-aw-surface px-3.75 pb-7 pt-4'>
@@ -149,42 +149,3 @@ export function AnimeCatalog() {
 	)
 }
 
-function CatalogBody({
-	viewMode,
-	catalog,
-}: {
-	viewMode: CatalogViewMode
-	catalog: ReturnType<typeof useAnimeCatalog>
-}) {
-	if (catalog.isInitialLoading) {
-		return (
-			<div className='py-10 text-center text-aw-subtle'>
-				Загрузка каталога...
-			</div>
-		)
-	}
-
-	if (catalog.error) {
-		return (
-			<div className='py-10 text-center text-aw-subtle'>
-				{catalog.error}
-			</div>
-		)
-	}
-
-	if (catalog.anime.length === 0) {
-		return (
-			<div className='py-10 text-center text-aw-subtle'>
-				Ничего не найдено по заданным фильтрам.
-			</div>
-		)
-	}
-
-	return (
-		<div className={GRID_CLASSES[viewMode]}>
-			{catalog.anime.map(anime => (
-				<AnimeCard key={anime.id} anime={anime} variant={viewMode} />
-			))}
-		</div>
-	)
-}

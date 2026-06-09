@@ -1,4 +1,3 @@
-import { CatalogFilterParams } from '@/features/catalog/hooks/useCatalogFilters'
 import type { Anime } from '@/types/anime'
 import type {
 	CatalogViewMode,
@@ -7,7 +6,7 @@ import type {
 	SortOption,
 } from '@/types/catalog'
 import { CATALOG_VIEW_MODES } from '@/utils/catalogData'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAnimeCache } from './useAnimeCache'
 
 export type AnimeCatalogState = {
@@ -63,11 +62,7 @@ export function useAnimeCatalog(
 		].join(',')
 	}, [filters, sortOption, sortDirection])
 
-	// Ref so loadMore always reads current params without being in its dep array
-	const paramsRef = useRef(params)
-	paramsRef.current = params
-
-	// Reset and reload first page whenever filters or viewLimit change
+	// Reset display count when filters or sort change
 	useEffect(() => {
 		setDisplayCount(pageSize)
 	}, [resetKey, pageSize])
@@ -83,14 +78,6 @@ export function useAnimeCatalog(
 		setDisplayCount(prev => prev + pageSize)
 	}, [pageSize])
 
-	return { anime, error, isInitialLoading, isLoadingMore, hasMore, loadMore }
-}
-
-function buildApiParams(
-	params: CatalogFilterParams,
-	page: string,
-	limit: string,
-) {
 	return {
 		anime: displayed,
 		isInitialLoading: allAnime.length === 0 && isLoading,
