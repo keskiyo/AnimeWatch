@@ -33,11 +33,36 @@ async def get_anime_catalog(query: dict[str, str | None]) -> dict:
 
 async def get_bulk_anime_catalog() -> dict:
     """
-    Return all anime from 1990+ in one response, sorted: ongoing first → by year desc.
-    SQLite-cached 24 h.
+    Return the full catalog from the LOCAL anime_catalog table (no Shikimori
+    calls). If the table is empty the response carries needs_sync=true —
+    run `python -m src.scripts.sync_shikimori full` to populate it.
     """
     items = await fetch_shikimori_bulk_catalog(get_settings())
-    return {"data": items, "total": len(items)}
+    result = {"data": items, "total": len(items)}
+    if not items:
+        result["needs_sync"] = True
+    return result
+
+
+async def get_dubbing_anime(translation_id: int) -> dict:
+    """Return anime voiced by the given Kodik dubbing team (translation id).
+
+    Kodik /list gives Shikimori ids; details come from the bulk catalog cache
+    so no extra Shikimori requests are made.
+    """
+    from src.services.kodik import get_dubbing_shikimori_ids
+
+    try:
+        ids = await get_dubbing_shikimori_ids(translation_id)
+        if not ids:
+            return {"data": [], "total": 0, "translation_id": translation_id}
+        catalog = await fetch_shikimori_bulk_catalog(get_settings())
+        by_id = {item["id"]: item for item in catalog}
+        items = [by_id[i] for i in ids if i in by_id]
+        return {"data": items, "total": len(items), "translation_id": translation_id}
+    except Exception as error:
+        log.error("get_dubbing_anime %d: %s", translation_id, error)
+        return {"data": [], "total": 0, "translation_id": translation_id}
 
 
 async def get_studio_anime(studio_name: str) -> dict:

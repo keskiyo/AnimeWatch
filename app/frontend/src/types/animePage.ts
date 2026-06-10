@@ -24,11 +24,15 @@ export type AnimePlayerTrack = {
 	label: string
 	isActive?: boolean
 	isMuted?: boolean
+	/** Kodik player link for this specific translation. */
+	link?: string
+	episodesCount?: number
 }
 
 export type AnimePlayerEpisode = {
 	number: number
 	isActive?: boolean
+	title?: string | null
 }
 
 export type AnimeScheduleRow = {
@@ -41,6 +45,32 @@ export type AnimeScheduleRow = {
 export type PlayerProvider = {
 	id: string
 	label: string
+}
+
+export type AnimePlayerProps = {
+	title: string
+	background: string
+	tracks: AnimePlayerTrack[]
+	episodes: AnimePlayerEpisode[]
+	player?: KodikPlayer
+	activeEpisodeTitle: string
+	activeEpisodeDate: string
+	ageRating?: string | number | null
+	providers?: PlayerProvider[]
+	activeTrackId?: string
+	activeProviderId?: string
+	onTrackChange?: (trackId: string) => void
+	onProviderChange?: (providerId: string) => void
+}
+
+export type AnimePlayerSidebarProps = {
+	tracks: AnimePlayerTrack[]
+	providers: PlayerProvider[]
+	hasEpisodes: boolean
+	activeTrackId?: string
+	activeProviderId?: string
+	onTrackChange?: (trackId: string) => void
+	onProviderChange?: (providerId: string) => void
 }
 
 export type AnimePageData = {

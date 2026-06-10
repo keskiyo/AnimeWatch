@@ -41,7 +41,7 @@ export function AnimePageHero({ data }: AnimePageHeroProps) {
 				{data.fullTitle}
 			</h1>
 			<div className='flex gap-6 max-[760px]:flex-col'>
-				<AnimePosterActions anime={data.anime} />
+				<AnimePosterActions anime={data.anime} player={data.player} />
 				<AnimeInfoPanel rows={data.infoRows} />
 			</div>
 			<div className='mt-8 grid gap-5 text-base leading-relaxed text-aw-text'>

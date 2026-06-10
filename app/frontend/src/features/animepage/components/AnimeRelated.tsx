@@ -1,7 +1,7 @@
+import { PosterImage } from '@/components/anime/PosterImage'
 import type { RelatedAnime } from '@/types/anime'
 import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
-import { proxyImage } from '@/utils/imageProxy'
 import { Link } from 'react-router-dom'
 
 type AnimeRelatedProps = {
@@ -38,18 +38,11 @@ export function AnimeRelated({ items }: AnimeRelatedProps) {
 									{formatAnimeRating(item.rating)}
 								</span>
 
-								{item.poster_url ? (
-									<img
-										src={proxyImage(item.poster_url)}
-										alt={`${title} poster`}
-										className='h-full w-full object-cover'
-										loading='lazy'
-									/>
-								) : (
-									<span className='flex h-full items-center justify-center text-2xl font-black text-white/60'>
-										{title.slice(0, 2).toUpperCase()}
-									</span>
-								)}
+								<PosterImage
+									url={item.poster_url}
+									title={title}
+									placeholderClassName='flex h-full items-center justify-center text-2xl font-black text-white/60'
+								/>
 
 								<span className='absolute bottom-0 left-0 right-0 bg-aw-accent/90 px-1.5 py-1 text-[10px] font-medium leading-tight text-white'>
 									{item.relation}

@@ -1,27 +1,32 @@
-import { getCatalog } from '@/api/animeApi'
+import { getHomeSeasonAnime } from '@/api/scheduleApi'
+import { HomeSeasonRail } from '@/features/home/components/HomeSeasonRail'
 import type { Anime } from '@/types/anime'
-import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
-import { createAnimeSlug } from '@/utils/animeSlug'
-import { proxyImage } from '@/utils/imageProxy'
 import {
 	HOME_ADVANTAGES,
 	HOME_FREE_PARAGRAPHS,
 	HOME_FREE_TITLE,
 	HOME_INTRO_PARAGRAPHS,
 	HOME_INTRO_TITLE,
-} from '@/utils/catalogData'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+} from '@/utils/catalogTexts'
+import { setPageMeta } from '@/utils/pageMeta'
+import { useEffect, useState } from 'react'
+
+type ScheduleItem = {
+	anime: Anime
+	episode: number
+	time: string
+	studio?: string
+}
+
+type ScheduleResponse = Record<string, ScheduleItem[]>
 
 export function HomePage() {
-	const railRef = useRef<HTMLDivElement>(null)
 	const [anime, setAnime] = useState<Anime[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 
 	useEffect(() => {
-		document.title = 'AnimeWatch — смотреть аниме онлайн бесплатно'
-		setMetaDescription(
+		setPageMeta(
+			'AnimeWatch — смотреть аниме онлайн бесплатно',
 			'Смотрите аниме онлайн бесплатно без регистрации. Большой каталог: сериалы, фильмы, OVA. Удобный поиск по жанрам и рейтингу.',
 		)
 	}, [])
@@ -30,18 +35,26 @@ export function HomePage() {
 		let isCancelled = false
 
 		async function loadHomeAnime() {
-			setIsLoading(true)
-			const result = await getCatalog({
-				limit: '12',
-				page: '1',
-				sort: 'startDate',
-				direction: 'desc',
-				status: 'ongoing',
-			})
+			try {
+				setIsLoading(true)
 
-			if (!isCancelled) {
-				setAnime(result.data)
-				setIsLoading(false)
+				const result = await getHomeSeasonAnime(15)
+
+				console.log('HOME anime:', result.slice(0, 5))
+
+				if (!isCancelled) {
+					setAnime(result)
+				}
+			} catch (error) {
+				console.error('Failed to load home anime:', error)
+
+				if (!isCancelled) {
+					setAnime([])
+				}
+			} finally {
+				if (!isCancelled) {
+					setIsLoading(false)
+				}
 			}
 		}
 
@@ -51,13 +64,6 @@ export function HomePage() {
 			isCancelled = true
 		}
 	}, [])
-
-	function onClickScrollSeason(direction: 'left' | 'right') {
-		railRef.current?.scrollBy({
-			behavior: 'smooth',
-			left: direction === 'left' ? -420 : 420,
-		})
-	}
 
 	return (
 		<main className='mx-auto max-w-345 px-4 py-6.5 pb-9'>
@@ -73,65 +79,7 @@ export function HomePage() {
 						Новые аниме
 					</h1>
 				</div>
-				<div className='group relative'>
-					<button
-						type='button'
-						className='pointer-events-none absolute left-3 top-28 z-3 inline-flex h-14 w-14 cursor-pointer items-center justify-center rounded-full border-0 bg-[rgba(36,37,38,0.92)] text-aw-text opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:bg-[rgba(49,50,51,0.98)]'
-						aria-label='Прокрутить сезон влево'
-						onClick={() => onClickScrollSeason('left')}
-					>
-						<ChevronLeft size={28} aria-hidden='true' />
-					</button>
-					<div
-						ref={railRef}
-						className='grid auto-cols-[minmax(150px,178px)] grid-flow-col gap-6 overflow-x-auto scroll-smooth scrollbar-none [&::-webkit-scrollbar]:hidden'
-					>
-						{isLoading ? (
-							<div className='col-span-full py-16 text-aw-subtle'>
-								Загрузка аниме...
-							</div>
-						) : (
-							anime.map(anime => {
-								const title = anime.title_ru || anime.title_en
-
-								return (
-									<Link
-										key={anime.id}
-										to={`/anime/${createAnimeSlug(anime.id, anime.title_en || title)}`}
-										aria-label={title}
-										className='relative grid min-w-0 no-underline'
-									>
-										<span
-										className={`absolute left-0 top-2 z-1 min-w-10.5 rounded px-2 py-1.5 text-center text-[15px] font-bold leading-none ${getAnimeRatingColor(anime.rating)}`}
-									>
-										{formatAnimeRating(anime.rating)}
-									</span>
-										<img
-											className='h-62.5 w-full rounded-md bg-aw-surface object-cover aspect-2/3'
-											src={proxyImage(anime.poster_url)}
-											alt={`${title} постер`}
-											loading='lazy'
-										/>
-										<small className='mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-aw-text'>
-											{anime.title_en}
-										</small>
-										<strong className='mt-1 line-clamp-2 overflow-hidden text-lg font-normal leading-tight text-aw-accent'>
-											{title}
-										</strong>
-									</Link>
-								)
-							})
-						)}
-					</div>
-					<button
-						type='button'
-						className='pointer-events-none absolute right-3 top-28 z-3 inline-flex h-14 w-14 cursor-pointer items-center justify-center rounded-full border-0 bg-[rgba(36,37,38,0.92)] text-aw-text opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:bg-[rgba(49,50,51,0.98)]'
-						aria-label='Прокрутить сезон вправо'
-						onClick={() => onClickScrollSeason('right')}
-					>
-						<ChevronRight size={28} aria-hidden='true' />
-					</button>
-				</div>
+				<HomeSeasonRail anime={anime} isLoading={isLoading} />
 			</section>
 
 			<article className='max-w-322.5 text-aw-text'>
@@ -184,16 +132,4 @@ export function HomePage() {
 			</article>
 		</main>
 	)
-}
-
-function setMetaDescription(content: string) {
-	let meta = document.querySelector<HTMLMetaElement>(
-		'meta[name="description"]',
-	)
-	if (!meta) {
-		meta = document.createElement('meta')
-		meta.name = 'description'
-		document.head.appendChild(meta)
-	}
-	meta.content = content
 }

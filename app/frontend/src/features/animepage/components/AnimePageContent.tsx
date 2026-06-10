@@ -38,7 +38,8 @@ export function AnimePageContent({ data }: AnimePageContentProps) {
 				onTrackChange={setActiveTrackId}
 				onProviderChange={setActiveProviderId}
 			/>
-			{data.scheduleRows.length > 0 && (
+			{(data.scheduleRows.length > 0 ||
+				data.anime.status === 'ongoing') && (
 				<EpisodeSchedule rows={data.scheduleRows} />
 			)}
 		</div>

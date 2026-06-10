@@ -1,8 +1,8 @@
 .vscode
 
 AGENTS.md
-CLAUDE.md
 questions_API.md
+Prompt.md
 
 prompt.md
 Design.md

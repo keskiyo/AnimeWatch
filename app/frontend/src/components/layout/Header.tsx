@@ -71,7 +71,7 @@ export function Header() {
 					>
 						<button
 							type='button'
-							className='inline-flex h-10 w-10 items-center justify-center rounded-md border border-aw-border bg-aw-surface text-aw-text'
+							className='inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-aw-border bg-aw-surface text-aw-text'
 							aria-label='Открыть меню'
 							aria-expanded={isMenuOpen}
 							onClick={() => setIsMenuOpen(value => !value)}
@@ -108,7 +108,7 @@ export function Header() {
 										onClick={() =>
 											setIsOpenSearchModal(true)
 										}
-										className='flex w-full items-center gap-2 rounded-md border-0 bg-transparent px-3 py-2 text-left text-aw-subtle hover:bg-aw-elevated hover:text-aw-text'
+										className='flex w-full cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent px-3 py-2 text-left text-aw-subtle hover:bg-aw-elevated hover:text-aw-text'
 										aria-label='Поиск'
 									>
 										<Search size={18} aria-hidden='true' />
@@ -116,7 +116,7 @@ export function Header() {
 									</button>
 									<button
 										type='button'
-										className='mt-1 flex w-full items-center gap-2 rounded-md border-0 bg-transparent px-3 py-2 text-left text-aw-subtle hover:bg-aw-elevated hover:text-aw-text'
+										className='mt-1 flex w-full cursor-pointer items-center gap-2 rounded-md border-0 bg-transparent px-3 py-2 text-left text-aw-subtle hover:bg-aw-elevated hover:text-aw-text'
 									>
 										<UserCircle
 											size={19}

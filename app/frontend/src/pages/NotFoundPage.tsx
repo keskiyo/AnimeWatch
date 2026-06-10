@@ -35,7 +35,7 @@ export function NotFoundPage({
 						<button
 							type='button'
 							onClick={() => navigate(-1)}
-							className='rounded-lg bg-[#e84d60] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#c0304a] active:scale-95'
+							className='cursor-pointer rounded-lg bg-[#e84d60] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#c0304a] active:scale-95'
 						>
 							← Назад
 						</button>

@@ -1,7 +1,7 @@
+import { PosterImage } from '@/components/anime/PosterImage'
 import type { CatalogAnimeCardProps, CatalogViewMode } from '@/types/catalog'
 import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
-import { proxyImage } from '@/utils/imageProxy'
 import { Link } from 'react-router-dom'
 
 const CARD_CLASSES: Record<CatalogViewMode, string> = {
@@ -39,18 +39,11 @@ export function AnimeCard({
 				>
 					{formatAnimeRating(anime.rating)}
 				</span>
-				{anime.poster_url ? (
-					<img
-						className='h-full w-full object-cover'
-						src={proxyImage(anime.poster_url)}
-						alt={`${anime.title_en} poster`}
-						loading='lazy'
-					/>
-				) : (
-					<span className='relative px-3 pb-5.5 text-center text-[clamp(24px,5vw,42px)] font-black leading-none text-white/90 [text-shadow:0_5px_18px_rgba(0,0,0,0.48)]'>
-						{getPosterLabel(anime.title_en || anime.title_ru)}
-					</span>
-				)}
+				<PosterImage
+					url={anime.poster_url}
+					title={anime.title_en || anime.title_ru}
+					placeholderClassName='relative flex h-full w-full items-end justify-center px-3 pb-5.5 text-center text-[clamp(24px,5vw,42px)] font-black leading-none text-white/90 [text-shadow:0_5px_18px_rgba(0,0,0,0.48)]'
+				/>
 			</div>
 			<div
 				className={`overflow-hidden text-ellipsis whitespace-nowrap text-[13px] leading-tight text-[#b8c0c8] ${
@@ -109,11 +102,3 @@ function formatAnimeType(value: string): string {
 	return labels[value] ?? value
 }
 
-function getPosterLabel(value: string): string {
-	return value
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 2)
-		.map(word => word[0]?.toUpperCase() ?? '')
-		.join('')
-}

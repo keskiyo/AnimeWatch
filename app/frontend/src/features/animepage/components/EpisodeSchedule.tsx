@@ -1,11 +1,32 @@
 import type { AnimeScheduleRow } from '@/types/animePage'
 import { Check, Eye } from 'lucide-react'
+import { useState } from 'react'
+
+const INITIAL_ROWS = 5
 
 type EpisodeScheduleProps = {
 	rows: AnimeScheduleRow[]
 }
 
 export function EpisodeSchedule({ rows }: EpisodeScheduleProps) {
+	const [expanded, setExpanded] = useState(false)
+
+	const visibleRows = expanded ? rows : rows.slice(0, INITIAL_ROWS)
+	const hasMore = rows.length > INITIAL_ROWS
+
+	if (rows.length === 0) {
+		return (
+			<section className='rounded-lg bg-aw-surface px-5 py-4'>
+				<h2 className='mb-1 text-2xl font-normal leading-tight text-aw-text'>
+					График выхода серий
+				</h2>
+				<p className='py-6 text-center text-aw-subtle'>
+					Расписание выхода эпизодов пока недоступно
+				</p>
+			</section>
+		)
+	}
+
 	return (
 		<section className='rounded-lg bg-aw-surface px-5 py-4'>
 			<h2 className='mb-1 text-2xl font-normal leading-tight text-aw-text'>
@@ -35,16 +56,18 @@ export function EpisodeSchedule({ rows }: EpisodeScheduleProps) {
 						</tr>
 					</thead>
 					<tbody>
-						{rows.map(row => (
+						{visibleRows.map(row => (
 							<tr key={row.episode}>
 								<td className='px-3.5 py-4'>{row.episode}</td>
 								<td className='px-3.5 py-4 font-semibold'>
-									{row.title}
+									{row.title || 'Неизвестно'}
 								</td>
 								<td className='px-3.5 py-4 text-aw-subtle'>
 									<Eye size={14} aria-hidden='true' />
 								</td>
-								<td className='px-3.5 py-4'>{row.releaseDate}</td>
+								<td className='px-3.5 py-4'>
+									{row.releaseDate || 'Неизвестно'}
+								</td>
 								<td className='px-3.5 py-4'>
 									{row.status === 'released' ? (
 										<Check
@@ -53,7 +76,7 @@ export function EpisodeSchedule({ rows }: EpisodeScheduleProps) {
 											aria-label='Вышла'
 										/>
 									) : (
-										<span>через 9 часов</span>
+										<span className='text-aw-warning'>Скоро</span>
 									)}
 								</td>
 							</tr>
@@ -61,14 +84,18 @@ export function EpisodeSchedule({ rows }: EpisodeScheduleProps) {
 					</tbody>
 				</table>
 			</div>
-			<div className='mt-2 flex justify-center'>
-				<button
-					type='button'
-					className='border-b border-dashed border-aw-text bg-transparent text-sm text-aw-text hover:text-aw-accent'
-				>
-					Показать ещё
-				</button>
-			</div>
+
+			{hasMore && (
+				<div className='mt-2 flex justify-center'>
+					<button
+						type='button'
+						className='cursor-pointer border-b border-dashed border-aw-text bg-transparent text-sm text-aw-text hover:text-aw-accent'
+						onClick={() => setExpanded(prev => !prev)}
+					>
+						{expanded ? 'Свернуть' : `Показать ещё (${rows.length - INITIAL_ROWS})`}
+					</button>
+				</div>
+			)}
 		</section>
 	)
 }

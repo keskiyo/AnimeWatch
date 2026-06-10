@@ -1,4 +1,5 @@
-import { getAnime, getKodikPlayer, getRelated } from '@/api/animeApi'
+import { getAnime, getRelated } from '@/api/animeApi'
+import { getKodikPlayer } from '@/api/playerApi'
 import { AnimePageContent } from '@/features/animepage/components/AnimePageContent'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import type { AnimePageData } from '@/types/animePage'

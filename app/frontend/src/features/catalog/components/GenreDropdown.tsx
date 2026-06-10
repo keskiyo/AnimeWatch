@@ -1,5 +1,6 @@
 import type { GenreDropdownProps } from '@/types/catalog'
-import { filterGenreOptions, STRICT_MATCH_TOOLTIP } from '@/utils/catalogData'
+import { filterGenreOptions } from '@/utils/catalogData'
+import { STRICT_MATCH_TOOLTIP } from '@/utils/catalogTexts'
 import { ChevronDown, Info } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 

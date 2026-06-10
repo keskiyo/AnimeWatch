@@ -1,7 +1,8 @@
+import { Lightbox } from '@/features/animepage/components/Lightbox'
 import type { AnimeFrame } from '@/types/animePage'
 import { proxyImage } from '@/utils/imageProxy'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 
 type AnimeFramesProps = {
 	frames: AnimeFrame[]
@@ -9,6 +10,8 @@ type AnimeFramesProps = {
 
 export function AnimeFrames({ frames }: AnimeFramesProps) {
 	const railRef = useRef<HTMLDivElement>(null)
+	const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+	const [lightboxAlt, setLightboxAlt] = useState('')
 
 	if (frames.length === 0) return null
 
@@ -17,6 +20,13 @@ export function AnimeFrames({ frames }: AnimeFramesProps) {
 			behavior: 'smooth',
 			left: direction === 'left' ? -480 : 480,
 		})
+	}
+
+	function openLightbox(frame: AnimeFrame) {
+		const src = frame.imageUrl ? proxyImage(frame.imageUrl) : null
+		if (!src) return
+		setLightboxSrc(src)
+		setLightboxAlt(frame.label)
 	}
 
 	return (
@@ -46,8 +56,9 @@ export function AnimeFrames({ frames }: AnimeFramesProps) {
 								<img
 									src={proxyImage(frame.imageUrl)}
 									alt={frame.label}
-									className='h-full w-full object-cover'
+									className='h-full w-full cursor-zoom-in object-cover transition-opacity hover:opacity-85'
 									loading='lazy'
+									onClick={() => openLightbox(frame)}
 								/>
 							) : (
 								<span
@@ -70,6 +81,14 @@ export function AnimeFrames({ frames }: AnimeFramesProps) {
 					<ChevronRight size={28} aria-hidden='true' />
 				</button>
 			</div>
+
+			{lightboxSrc && (
+				<Lightbox
+					src={lightboxSrc}
+					alt={lightboxAlt}
+					onClose={() => setLightboxSrc(null)}
+				/>
+			)}
 		</section>
 	)
 }

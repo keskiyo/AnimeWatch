@@ -5,6 +5,8 @@
 const API_BASE_URL =
 	import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001/api'
 
+// shikimori.one — old domain, hotlink-protected; route via backend proxy
+// shikimori.io  — new CDN domain (GQL poster URLs), loads freely — NO proxy needed
 const PROXIED_HOSTS = ['shikimori.one', 'shikimori.org']
 
 /**

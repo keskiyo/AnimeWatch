@@ -11,9 +11,11 @@ const GRID_CLASSES: Record<CatalogViewMode, string> = {
 export function CatalogBody({
 	viewMode,
 	catalog,
+	emptyText = 'В каталоге пока ничего нет.',
 }: {
 	viewMode: CatalogViewMode
 	catalog: ReturnType<typeof useAnimeCatalog>
+	emptyText?: string
 }) {
 	if (catalog.isInitialLoading) {
 		return (
@@ -33,9 +35,7 @@ export function CatalogBody({
 
 	if (catalog.anime.length === 0) {
 		return (
-			<div className='py-10 text-center text-aw-subtle'>
-				В каталоге пока ничего нет.
-			</div>
+			<div className='py-10 text-center text-aw-subtle'>{emptyText}</div>
 		)
 	}
 

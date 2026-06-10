@@ -1,52 +1,14 @@
 import type { SortDirection, SortOption } from '@/types/catalog'
+import {
+	API_TO_LABEL,
+	GROUP_TO_PARAM,
+	LABEL_TO_API,
+	SORT_FROM_PARAM,
+	SORT_TO_PARAM,
+	toggleParamValue,
+} from '@/utils/catalogFilterMaps'
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-
-// ─── Sort mapping (from SortDropdown comments) ────────────────────────────────
-
-export const SORT_TO_PARAM: Record<SortOption, string> = {
-	новизне: 'startDate',
-	'дате добавления': 'createdAt',
-	рейтингу: 'rating',
-}
-
-const SORT_FROM_PARAM: Record<string, SortOption> = {
-	startDate: 'новизне',
-	createdAt: 'дате добавления',
-	rating: 'рейтингу',
-}
-
-// ─── Filter group → API param name ────────────────────────────────────────────
-// Keys must match group.title values from filterGroups in catalogData.ts
-
-const GROUP_TO_PARAM: Record<string, string> = {
-	Тип: 'type',
-	Статус: 'status',
-	Сезон: 'season',
-}
-
-// ─── UI label ↔ API value ─────────────────────────────────────────────────────
-
-const LABEL_TO_API: Record<string, string> = {
-	'ТВ-сериал': 'tv',
-	Фильм: 'movie',
-	OVA: 'ova',
-	ONA: 'ona',
-	Спешл: 'special',
-	Онгоинг: 'ongoing',
-	Вышло: 'released',
-	Анонс: 'anons',
-	Зима: 'winter',
-	Весна: 'spring',
-	Лето: 'summer',
-	Осень: 'fall',
-}
-
-const API_TO_LABEL = Object.fromEntries(
-	Object.entries(LABEL_TO_API).map(([label, api]) => [api, label]),
-) as Record<string, string>
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CatalogFilterParams = {
 	sort: string
@@ -62,8 +24,6 @@ export type CatalogFilterParams = {
 
 const DEFAULT_YEAR_FROM = 1959
 const DEFAULT_YEAR_TO = new Date().getFullYear()
-
-// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useCatalogFilters() {
 	const [searchParams, setSearchParams] = useSearchParams()
@@ -140,17 +100,7 @@ export function useCatalogFilters() {
 			setSearchParams(
 				prev => {
 					const next = new URLSearchParams(prev)
-					const current = next.getAll(paramName)
-					next.delete(paramName)
-					if (current.includes(apiValue)) {
-						current
-							.filter(v => v !== apiValue)
-							.forEach(v => next.append(paramName, v))
-					} else {
-						;[...current, apiValue].forEach(v =>
-							next.append(paramName, v),
-						)
-					}
+					toggleParamValue(next, paramName, apiValue)
 					next.delete('page')
 					return next
 				},
@@ -165,17 +115,7 @@ export function useCatalogFilters() {
 			setSearchParams(
 				prev => {
 					const next = new URLSearchParams(prev)
-					const current = next.getAll('genre')
-					next.delete('genre')
-					if (current.includes(genre)) {
-						current
-							.filter(v => v !== genre)
-							.forEach(v => next.append('genre', v))
-					} else {
-						;[...current, genre].forEach(v =>
-							next.append('genre', v),
-						)
-					}
+					toggleParamValue(next, 'genre', genre)
 					next.delete('page')
 					return next
 				},
@@ -197,14 +137,13 @@ export function useCatalogFilters() {
 		)
 	}, [setSearchParams])
 
-	const setYearFrom = useCallback(
-		(year: number) => {
+	const setYear = useCallback(
+		(param: 'yearFrom' | 'yearTo', year: number, defaultYear: number) => {
 			setSearchParams(
 				prev => {
 					const next = new URLSearchParams(prev)
-					if (year !== DEFAULT_YEAR_FROM)
-						next.set('yearFrom', String(year))
-					else next.delete('yearFrom')
+					if (year !== defaultYear) next.set(param, String(year))
+					else next.delete(param)
 					next.delete('page')
 					return next
 				},
@@ -214,21 +153,14 @@ export function useCatalogFilters() {
 		[setSearchParams],
 	)
 
+	const setYearFrom = useCallback(
+		(year: number) => setYear('yearFrom', year, DEFAULT_YEAR_FROM),
+		[setYear],
+	)
+
 	const setYearTo = useCallback(
-		(year: number) => {
-			setSearchParams(
-				prev => {
-					const next = new URLSearchParams(prev)
-					if (year !== DEFAULT_YEAR_TO)
-						next.set('yearTo', String(year))
-					else next.delete('yearTo')
-					next.delete('page')
-					return next
-				},
-				{ replace: true },
-			)
-		},
-		[setSearchParams],
+		(year: number) => setYear('yearTo', year, DEFAULT_YEAR_TO),
+		[setYear],
 	)
 
 	const resetFilters = useCallback(() => {

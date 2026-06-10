@@ -52,7 +52,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             aria-label="Увеличить значение"
             disabled={disabled || readOnly}
             onMouseDown={(event) => changeByStep("increment", event)}
-            className="pointer-events-auto flex size-4 items-center justify-center rounded-full border border-aw-border bg-aw-surface text-aw-subtle transition hover:bg-aw-elevated hover:text-aw-text disabled:pointer-events-none disabled:opacity-50"
+            className="pointer-events-auto flex size-4 cursor-pointer items-center justify-center rounded-full border border-aw-border bg-aw-surface text-aw-subtle transition hover:bg-aw-elevated hover:text-aw-text disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronUp className="size-3" strokeWidth={2.5} />
           </button>
@@ -62,7 +62,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             aria-label="Уменьшить значение"
             disabled={disabled || readOnly}
             onMouseDown={(event) => changeByStep("decrement", event)}
-            className="pointer-events-auto flex size-4 items-center justify-center rounded-full border border-aw-border bg-aw-surface text-aw-subtle transition hover:bg-aw-elevated hover:text-aw-text disabled:pointer-events-none disabled:opacity-50"
+            className="pointer-events-auto flex size-4 cursor-pointer items-center justify-center rounded-full border border-aw-border bg-aw-surface text-aw-subtle transition hover:bg-aw-elevated hover:text-aw-text disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronDown className="size-3" strokeWidth={2.5} />
           </button>

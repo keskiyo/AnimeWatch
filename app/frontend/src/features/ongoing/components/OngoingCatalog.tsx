@@ -1,4 +1,4 @@
-import { AnimeCard } from '@/features/catalog/components/AnimeCard'
+import { CatalogBody } from '@/features/catalog/components/CatalogBody'
 import { SortDropdown } from '@/features/catalog/components/SortDropdown'
 import { ViewModeButtons } from '@/features/catalog/components/ViewModeButtons'
 import { useAnimeCatalog } from '@/features/catalog/hooks/useAnimeCatalog'
@@ -10,15 +10,9 @@ import type {
 	SortDirection,
 	SortOption,
 } from '@/types/catalog'
-import { parseClientFilters } from '@/utils/catalogData'
+import { parseClientFilters } from '@/utils/catalogFilters'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-
-const GRID_CLASSES: Record<CatalogViewMode, string> = {
-	poster: 'grid grid-cols-4 gap-x-5 gap-y-7 max-[900px]:grid-cols-3 max-[640px]:grid-cols-2 max-[420px]:grid-cols-1',
-	compact: 'grid grid-cols-2 gap-x-5 gap-y-7 max-[900px]:grid-cols-1',
-	list: 'grid grid-cols-1 gap-x-5 gap-y-7',
-}
 
 export function OngoingCatalog() {
 	const [searchParams] = useSearchParams()
@@ -37,7 +31,12 @@ export function OngoingCatalog() {
 		}
 	}, [searchParams])
 
-	const catalog = useAnimeCatalog(viewMode, sortOption, sortDirection, filters)
+	const catalog = useAnimeCatalog(
+		viewMode,
+		sortOption,
+		sortDirection,
+		filters,
+	)
 
 	function toggleSortOption(option: SortOption) {
 		setIsAutoLoadEnabled(false)
@@ -94,12 +93,6 @@ export function OngoingCatalog() {
 		<section className='min-w-0 rounded-lg bg-aw-surface px-3.75 pb-7 pt-4'>
 			<OngoingCatalogInfo />
 			<hr className='mt-4 border-0 border-t border-aw-border' />
-			{!catalog.cacheComplete && catalog.cacheLoaded > 0 && (
-				<div className='py-1.5 text-xs text-aw-subtle'>
-					Загружено {catalog.cacheLoaded}
-					{catalog.cacheTotal > 0 ? ` / ${catalog.cacheTotal}` : ''} аниме...
-				</div>
-			)}
 			<div className='relative flex min-h-14.25 items-center justify-between'>
 				<SortDropdown
 					selected={sortOption}
@@ -109,7 +102,11 @@ export function OngoingCatalog() {
 				<ViewModeButtons viewMode={viewMode} onChange={setViewMode} />
 			</div>
 			<hr className='mb-7.75 border-0 border-t border-aw-border' />
-			<CatalogBody viewMode={viewMode} catalog={catalog} />
+			<CatalogBody
+				viewMode={viewMode}
+				catalog={catalog}
+				emptyText='Онгоинги не найдены.'
+			/>
 			<div ref={loadMoreRef}>
 				<LoadMore
 					onClick={onClickLoadMore}
@@ -123,45 +120,5 @@ export function OngoingCatalog() {
 				/>
 			</div>
 		</section>
-	)
-}
-
-function CatalogBody({
-	viewMode,
-	catalog,
-}: {
-	viewMode: CatalogViewMode
-	catalog: ReturnType<typeof useAnimeCatalog>
-}) {
-	if (catalog.isInitialLoading) {
-		return (
-			<div className='py-10 text-center text-aw-subtle'>
-				Загрузка каталога...
-			</div>
-		)
-	}
-
-	if (catalog.error) {
-		return (
-			<div className='py-10 text-center text-aw-subtle'>
-				{catalog.error}
-			</div>
-		)
-	}
-
-	if (catalog.anime.length === 0) {
-		return (
-			<div className='py-10 text-center text-aw-subtle'>
-				Онгоинги не найдены.
-			</div>
-		)
-	}
-
-	return (
-		<div className={GRID_CLASSES[viewMode]}>
-			{catalog.anime.map(anime => (
-				<AnimeCard key={anime.id} anime={anime} variant={viewMode} />
-			))}
-		</div>
 	)
 }

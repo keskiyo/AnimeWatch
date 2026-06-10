@@ -1,4 +1,4 @@
-import { getBulkCatalog, getCatalog } from '@/api/animeApi'
+import { getBulkCatalog, getCatalog } from '@/api/catalogApi'
 import type { Anime } from '@/types/anime'
 import { useEffect, useState } from 'react'
 

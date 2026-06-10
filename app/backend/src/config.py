@@ -20,6 +20,9 @@ class Settings:
     frontend_origins: list[str]
     yummyanime_endpoint: str
     yummyanime_token: str | None
+    shikimori_gql_endpoint: str
+    admin_sync_token: str | None
+    allow_shikimori_bulk_fallback: bool
 
 
 def get_settings() -> Settings:
@@ -52,6 +55,13 @@ def get_settings() -> Settings:
             environ.get("YUMMYANIME_PRIVATE_TOKEN")
             or environ.get("YUMMYANIME_PUBLIC_TOKEN")
             or "tlcf42b7vl0e_pde"
+        ),
+        shikimori_gql_endpoint=(
+            environ.get("SHIKIMORI_GQL_ENDPOINT") or "https://shikimori.io/api/graphql"
+        ).rstrip("/"),
+        admin_sync_token=environ.get("ADMIN_SYNC_TOKEN") or None,
+        allow_shikimori_bulk_fallback=(
+            environ.get("ALLOW_SHIKIMORI_BULK_FALLBACK", "").lower() == "true"
         ),
     )
 

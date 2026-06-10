@@ -1,21 +1,42 @@
-from typing import Any
+"""Kodik player integration.
 
-import httpx
-from anime_parsers_ru.parser_kodik_async import KodikParserAsync
+Module layout:
+  client.py    – HTTP fetchers (/search, /list), cache, URL validation
+  normalize.py – raw payload → player dict, translations, episode titles
+  dubbing.py   – anime ids by dubbing team
+"""
 
 from src.config import Settings, get_settings
-from src.db.cache import CacheStore, get_cached_json
+from src.db.cache import get_cached_json
 from src.logger import get_logger
+from src.services.kodik.client import (
+    KODIK_CACHE_TTL_SECONDS,
+    default_cache,
+    fetch_kodik_search,
+)
+from src.services.kodik.dubbing import get_dubbing_shikimori_ids
+from src.services.kodik.normalize import (
+    extract_episode_titles,
+    extract_translations,
+    normalize_kodik_player_result,
+    unavailable_player,
+)
 
 log = get_logger(__name__)
 
+__all__ = [
+    "extract_episode_titles",
+    "get_dubbing_shikimori_ids",
+    "get_kodik_player",
+    "get_kodik_search_results",
+    "normalize_kodik_player_result",
+    "unavailable_player",
+]
 
-ALLOWED_PLAYER_HOSTS = {"kodik.info", "kodik.cc", "kodik.biz", "kodik.online", "kodikplayer.com"}
-KODIK_CACHE_TTL_SECONDS = 900
-_cache_by_path: dict[str, CacheStore] = {}
 
-
-async def get_kodik_player(anime_id: int, episode_number: int, settings: Settings | None = None) -> dict:
+async def get_kodik_player(
+    anime_id: int, episode_number: int, settings: Settings | None = None
+) -> dict:
     env = settings or get_settings()
     if anime_id <= 0:
         return unavailable_player("Anime id is invalid")
@@ -26,88 +47,38 @@ async def get_kodik_player(anime_id: int, episode_number: int, settings: Setting
 
     try:
         response = await get_cached_json(
-            _default_cache(env),
-            f"kodik:player:{anime_id}",
+            default_cache(env),
+            f"kodik:player:v2:{anime_id}",
             KODIK_CACHE_TTL_SECONDS,
-            lambda: _fetch_kodik_search(anime_id, env),
+            lambda: fetch_kodik_search(anime_id, env),
         )
-        return normalize_kodik_player_result((response.get("results") or [None])[0])
+        results = [r for r in response.get("results") or [] if isinstance(r, dict)]
+        player = normalize_kodik_player_result(results[0] if results else None)
+        if player.get("available"):
+            player["translations"] = extract_translations(results)
+        return player
     except Exception as exc:
         log.error("kodik anime_id=%d: %s", anime_id, exc)
         return unavailable_player("Kodik is temporarily unavailable")
 
 
-def unavailable_player(message: str) -> dict:
-    return {"available": False, "provider": "kodik", "message": message}
-
-
-def normalize_kodik_player_result(result: dict[str, Any] | None) -> dict:
-    if not result:
-        return unavailable_player("Kodik player was not found")
-
-    link = result.get("link")
-    if not _is_allowed_url(link):
-        return unavailable_player("Kodik player URL is not allowed")
-
-    translation = result.get("translation") if isinstance(result.get("translation"), dict) else {}
-    return {
-        "available": True,
-        "provider": "kodik",
-        "link": link,
-        "translation": translation.get("title") or "Kodik",
-        "quality": result.get("quality") or "auto",
-        "episodes_count": _positive_number(result.get("episodes_count")),
-        "screenshots": [item for item in result.get("screenshots") or [] if isinstance(item, str) and item.startswith("https://")],
-    }
-
-
-async def _fetch_kodik_search(anime_id: int, settings: Settings) -> dict:
-    parser_result = await _fetch_with_anime_parsers(anime_id, settings)
-    if parser_result is not None:
-        return {"results": parser_result}
-
-    async with httpx.AsyncClient(timeout=10) as client:
-        response = await client.post(
-            f"{settings.kodik_endpoint}/search",
-            data={
-                "token": settings.kodik_api_key,
-                "shikimori_id": str(anime_id),
-                "types": "anime,anime-serial",
-                "with_episodes": "true",
-                "limit": "20",
-            },
-            headers={"Accept": "application/json"},
+async def get_kodik_search_results(
+    anime_id: int, settings: Settings | None = None
+) -> list[dict]:
+    """Return raw Kodik search results for *anime_id* (cached). Empty list on any failure."""
+    env = settings or get_settings()
+    if anime_id <= 0 or not env.kodik_api_key:
+        return []
+    try:
+        response = await get_cached_json(
+            default_cache(env),
+            f"kodik:player:v2:{anime_id}",
+            KODIK_CACHE_TTL_SECONDS,
+            lambda: fetch_kodik_search(anime_id, env),
         )
-        response.raise_for_status()
-        return response.json()
-
-
-async def _fetch_with_anime_parsers(anime_id: int, settings: Settings) -> list[dict] | None:
-    parser = KodikParserAsync(token=settings.kodik_api_key, validate_token=False)
-    try:
-        results = await parser.search_by_id(str(anime_id), "shikimori", limit=20)
-        return [item for item in results if isinstance(item, dict)]
-    except Exception:
-        return None
-    finally:
-        await parser.close_async_session()
-
-
-def _default_cache(settings: Settings) -> CacheStore:
-    if settings.database_path not in _cache_by_path:
-        _cache_by_path[settings.database_path] = CacheStore(settings.database_path)
-    return _cache_by_path[settings.database_path]
-
-
-def _is_allowed_url(value: Any) -> bool:
-    if not isinstance(value, str) or not value.startswith("https://"):
-        return False
-    try:
-        host = httpx.URL(value).host
-    except Exception:
-        return False
-    return host in ALLOWED_PLAYER_HOSTS
-
-
-def _positive_number(value: Any) -> int:
-    return round(value) if isinstance(value, int | float) and value > 0 else 0
+        return [
+            item for item in (response.get("results") or []) if isinstance(item, dict)
+        ]
+    except Exception as exc:
+        log.error("kodik search anime_id=%d: %s", anime_id, exc)
+        return []

@@ -1,5 +1,5 @@
-import { CatalogIntro } from '@/features/catalog/components/CatalogIntro'
 import { CatalogBody } from '@/features/catalog/components/CatalogBody'
+import { CatalogIntro } from '@/features/catalog/components/CatalogIntro'
 import { ViewModeButtons } from '@/features/catalog/components/ViewModeButtons'
 import { useAnimeCatalog } from '@/features/catalog/hooks/useAnimeCatalog'
 import { LoadMore } from '@/features/components/LoadMore'
@@ -8,11 +8,11 @@ import type {
 	SortDirection,
 	SortOption,
 } from '@/types/catalog'
+import { parseClientFilters } from '@/utils/catalogFilters'
 import {
 	CATALOG_INTRO_COLLAPSED,
 	CATALOG_INTRO_EXPANDED,
-	parseClientFilters,
-} from '@/utils/catalogData'
+} from '@/utils/catalogTexts'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SortDropdown } from './SortDropdown'
@@ -114,15 +114,6 @@ export function AnimeCatalog() {
 				paragraphs={introParagraphs}
 			/>
 			<hr className='mt-4 border-0 border-t border-aw-border' />
-			{!catalog.cacheComplete && catalog.cacheLoaded > 0 && (
-				<div className='py-1.5 text-xs text-aw-subtle'>
-					Загружено {catalog.cacheLoaded}
-					{catalog.cacheTotal > 0
-						? ` / ${catalog.cacheTotal}`
-						: ''}{' '}
-					аниме...
-				</div>
-			)}
 			<div className='relative flex min-h-14.25 items-center justify-between'>
 				<SortDropdown
 					selected={sortOption}
@@ -148,4 +139,3 @@ export function AnimeCatalog() {
 		</section>
 	)
 }
-
