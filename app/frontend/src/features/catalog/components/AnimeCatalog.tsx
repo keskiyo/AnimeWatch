@@ -1,6 +1,6 @@
-import { CatalogBody } from '@/features/catalog/components/CatalogBody'
+import { CatalogBody } from '@/features/catalog/components/grid/CatalogBody'
 import { CatalogIntro } from '@/features/catalog/components/CatalogIntro'
-import { ViewModeButtons } from '@/features/catalog/components/ViewModeButtons'
+import { ViewModeButtons } from '@/features/catalog/components/controls/ViewModeButtons'
 import { useAnimeCatalog } from '@/features/catalog/hooks/useAnimeCatalog'
 import { LoadMore } from '@/features/components/LoadMore'
 import type {
@@ -15,7 +15,7 @@ import {
 } from '@/utils/catalogTexts'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { SortDropdown } from './SortDropdown'
+import { SortDropdown } from '@/features/catalog/components/controls/SortDropdown'
 
 export function AnimeCatalog() {
 	const [searchParams, setSearchParams] = useSearchParams()

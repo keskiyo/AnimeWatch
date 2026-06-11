@@ -1,4 +1,4 @@
-import { AnimeCard } from '@/features/catalog/components/AnimeCard'
+import { AnimeCard } from '@/features/catalog/components/grid/AnimeCard'
 import type { Anime } from '@/types/anime'
 
 export type GridLoadState = 'idle' | 'loading' | 'done' | 'error'

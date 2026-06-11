@@ -1,4 +1,4 @@
-import { Lightbox } from '@/features/animepage/components/Lightbox'
+import { Lightbox } from '@/features/animepage/components/frames/Lightbox'
 import type { Anime, KodikPlayer } from '@/types/anime'
 import { formatWatchCounter } from '@/utils/animePageFormatters'
 import { proxyImage } from '@/utils/imageProxy'
@@ -8,6 +8,12 @@ import { useState } from 'react'
 type AnimePosterActionsProps = {
 	anime: Anime
 	player?: KodikPlayer
+}
+
+function scrollToPlayer() {
+	document
+		.getElementById('watch-player')
+		?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 export function AnimePosterActions({ anime, player }: AnimePosterActionsProps) {
@@ -43,6 +49,7 @@ export function AnimePosterActions({ anime, player }: AnimePosterActionsProps) {
 			<div className='mt-2 grid gap-2'>
 				<button
 					type='button'
+					onClick={scrollToPlayer}
 					className='grid h-9 cursor-pointer grid-cols-[1fr_auto] items-center rounded-md bg-[#f31b18] px-3 text-sm text-white transition hover:bg-[#ff302c]'
 				>
 					<span className='inline-flex items-center gap-2'>

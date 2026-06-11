@@ -1,5 +1,5 @@
-import { AnimeInfoPanel } from '@/features/animepage/components/AnimeInfoPanel'
-import { AnimePosterActions } from '@/features/animepage/components/AnimePosterActions'
+import { AnimeInfoPanel } from '@/features/animepage/components/hero/AnimeInfoPanel'
+import { AnimePosterActions } from '@/features/animepage/components/hero/AnimePosterActions'
 import type { AnimePageData } from '@/types/animePage'
 import { Star } from 'lucide-react'
 

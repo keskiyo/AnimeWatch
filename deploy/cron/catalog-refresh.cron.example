@@ -1,0 +1,17 @@
+# AnimeWatch — daily catalog refresh (recent seasons + ongoing/anons).
+#
+# Install:        crontab deploy/cron/catalog-refresh.cron.example
+#   (or merge into your crontab via `crontab -e`)
+# Verify:         crontab -l
+# Disable:        crontab -e  → delete/comment the refresh line
+# Logs:           /var/log/catalog-refresh.log
+#
+# Prefer loading secrets from a file instead of inlining them here, e.g.:
+#   0 4 * * * . /etc/animewatch/refresh.env && /usr/bin/curl -fsS -X POST "$BACKEND_URL/internal/catalog/refresh" -H "Authorization: Bearer $CATALOG_REFRESH_TOKEN" >> /var/log/catalog-refresh.log 2>&1
+
+SHELL=/bin/bash
+BACKEND_URL=https://api.example.com
+CATALOG_REFRESH_TOKEN=replace_me
+
+# Every day at 04:00. `curl -fsS` makes cron see non-2xx as a failure.
+0 4 * * * /usr/bin/curl -fsS -X POST "$BACKEND_URL/internal/catalog/refresh" -H "Authorization: Bearer $CATALOG_REFRESH_TOKEN" >> /var/log/catalog-refresh.log 2>&1

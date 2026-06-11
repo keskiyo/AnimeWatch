@@ -1,4 +1,4 @@
-import { SearchResultItem } from '@/features/header/components/SearchResultItem'
+import { SearchResultItem } from '@/features/header/components/search/SearchResultItem'
 import { useAnimeSearch } from '@/features/header/hooks/useAnimeSearch'
 import type { SearchModalProps } from '@/types/search'
 import { Search, X } from 'lucide-react'

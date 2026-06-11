@@ -2,10 +2,12 @@
 
 import httpx
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 
 from src.config import get_settings
+from src.db.users import ensure_users_schema, get_user_by_id
 from src.logger import get_logger
+from src.services.avatars import avatar_path
 
 log = get_logger(__name__)
 
@@ -24,6 +26,31 @@ _ALLOWED_IMAGE_HOSTS = (
 @router.get("/health")
 def health() -> dict:
     return {"status": "ok", "runtime": "fastapi"}
+
+
+@router.get("/users/{user_id}")
+def public_user_profile(user_id: int) -> dict:
+    """Public profile (no email): name, avatar, role, registration date."""
+    env = get_settings()
+    ensure_users_schema(env.database_path)
+    user = get_user_by_id(env.database_path, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    user.pop("email", None)
+    return user
+
+
+@router.get("/avatars/{user_id}")
+def user_avatar(user_id: int) -> FileResponse:
+    """Public avatar image (everyone sees it, e.g. next to comments)."""
+    path = avatar_path(user_id)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Avatar not found")
+    return FileResponse(
+        path,
+        media_type="image/webp",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @router.get("/image-proxy")

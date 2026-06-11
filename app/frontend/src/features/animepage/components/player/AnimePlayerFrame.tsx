@@ -1,4 +1,4 @@
-import { PlayerPlaceholder } from '@/features/animepage/components/PlayerPlaceholder'
+import { PlayerPlaceholder } from '@/features/animepage/components/player/PlayerPlaceholder'
 import type { KodikPlayer } from '@/types/anime'
 import { isAllowedPlayerUrl } from '@/utils/player'
 

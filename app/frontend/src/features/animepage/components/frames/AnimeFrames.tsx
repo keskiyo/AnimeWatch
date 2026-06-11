@@ -1,4 +1,4 @@
-import { Lightbox } from '@/features/animepage/components/Lightbox'
+import { Lightbox } from '@/features/animepage/components/frames/Lightbox'
 import type { AnimeFrame } from '@/types/animePage'
 import { proxyImage } from '@/utils/imageProxy'
 import { ChevronLeft, ChevronRight } from 'lucide-react'

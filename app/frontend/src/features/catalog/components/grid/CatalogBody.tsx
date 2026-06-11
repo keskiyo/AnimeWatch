@@ -1,4 +1,4 @@
-import { AnimeCard } from '@/features/catalog/components/AnimeCard'
+import { AnimeCard } from '@/features/catalog/components/grid/AnimeCard'
 import { useAnimeCatalog } from '@/features/catalog/hooks/useAnimeCatalog'
 import { CatalogViewMode } from '@/types/catalog'
 

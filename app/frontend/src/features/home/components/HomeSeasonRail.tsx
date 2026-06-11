@@ -40,9 +40,7 @@ export function HomeSeasonRail({ anime, isLoading }: HomeSeasonRailProps) {
 				className='grid auto-cols-[minmax(150px,178px)] grid-flow-col gap-6 overflow-x-auto scroll-smooth scrollbar-none [&::-webkit-scrollbar]:hidden'
 			>
 				{isLoading ? (
-					<div className='col-span-full py-16 text-aw-subtle'>
-						Загрузка аниме...
-					</div>
+					<HomeSeasonRailSkeleton />
 				) : (
 					anime.map(item => {
 						const title = item.title_ru || item.title_en
@@ -87,5 +85,25 @@ export function HomeSeasonRail({ anime, isLoading }: HomeSeasonRailProps) {
 				<ChevronRight size={28} aria-hidden='true' />
 			</button>
 		</div>
+	)
+}
+
+/** Card-shaped placeholders matching the real rail card layout (no jumps). */
+function HomeSeasonRailSkeleton() {
+	return (
+		<>
+			{Array.from({ length: 12 }, (_, i) => (
+				<div
+					key={i}
+					className='grid min-w-0 animate-pulse'
+					aria-hidden='true'
+				>
+					<span className='block h-62.5 w-full rounded-md bg-aw-elevated aspect-2/3' />
+					<span className='mt-2 block h-3.5 w-4/5 rounded bg-aw-elevated' />
+					<span className='mt-1.5 block h-5 w-full rounded bg-aw-elevated' />
+					<span className='mt-1 block h-5 w-3/5 rounded bg-aw-elevated' />
+				</div>
+			))}
+		</>
 	)
 }

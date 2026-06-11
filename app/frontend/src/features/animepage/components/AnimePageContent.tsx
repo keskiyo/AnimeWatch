@@ -1,8 +1,8 @@
-import { AnimeFrames } from '@/features/animepage/components/AnimeFrames'
-import { AnimePageHero } from '@/features/animepage/components/AnimePageHero'
-import { AnimePlayer } from '@/features/animepage/components/AnimePlayer'
+import { AnimeFrames } from '@/features/animepage/components/frames/AnimeFrames'
+import { AnimePageHero } from '@/features/animepage/components/hero/AnimePageHero'
+import { AnimePlayer } from '@/features/animepage/components/player/AnimePlayer'
 import { AnimeRelated } from '@/features/animepage/components/AnimeRelated'
-import { EpisodeSchedule } from '@/features/animepage/components/EpisodeSchedule'
+import { ReviewsAnimePage } from '@/features/animepage/components/comments/ReviewsAnimePage'
 import type { AnimePageData } from '@/types/animePage'
 import { useState } from 'react'
 
@@ -38,10 +38,7 @@ export function AnimePageContent({ data }: AnimePageContentProps) {
 				onTrackChange={setActiveTrackId}
 				onProviderChange={setActiveProviderId}
 			/>
-			{(data.scheduleRows.length > 0 ||
-				data.anime.status === 'ongoing') && (
-				<EpisodeSchedule rows={data.scheduleRows} />
-			)}
+			<ReviewsAnimePage animeId={data.anime.id} />
 		</div>
 	)
 }

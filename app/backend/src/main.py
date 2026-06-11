@@ -13,9 +13,13 @@ from src.db.anime_catalog import ensure_anime_catalog_schema
 from src.db.sync_state import ensure_sync_state_schema
 from src.routers.admin_sync import router as admin_sync_router
 from src.routers.anime import router as anime_router
+from src.routers.auth import router as auth_router
+from src.routers.comments import router as comments_router
+from src.routers.internal_catalog import router as internal_catalog_router
 from src.routers.library import router as library_router
 from src.routers.player import router as player_router
 from src.routers.system import router as system_router
+from src.services.auth import seed_admin_user
 from src.services.shikimori.sync import maybe_start_weekly_recent_sync
 
 env = get_settings()
@@ -37,7 +41,10 @@ app.include_router(system_router)
 app.include_router(anime_router)
 app.include_router(player_router)
 app.include_router(library_router)
+app.include_router(auth_router)
+app.include_router(comments_router)
 app.include_router(admin_sync_router)
+app.include_router(internal_catalog_router)
 
 
 @app.on_event("startup")
@@ -46,4 +53,5 @@ async def _startup() -> None:
     # NEVER started here automatically — only the weekly recent check.
     ensure_anime_catalog_schema(env.database_path)
     ensure_sync_state_schema(env.database_path)
+    seed_admin_user()
     await maybe_start_weekly_recent_sync(env)

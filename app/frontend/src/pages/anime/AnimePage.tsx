@@ -1,7 +1,8 @@
 import { getAnime, getRelated } from '@/api/animeApi'
 import { getKodikPlayer } from '@/api/playerApi'
 import { AnimePageContent } from '@/features/animepage/components/AnimePageContent'
-import { NotFoundPage } from '@/pages/NotFoundPage'
+import { EmptyAnimePage } from '@/features/animepage/components/EmptyAnimePage'
+import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import type { AnimePageData } from '@/types/animePage'
 import { createAnimePageData } from '@/utils/animePageData'
 import { parseAnimeSlugId } from '@/utils/animeSlug'
@@ -56,10 +57,8 @@ export function AnimePage() {
 
 	if (state.status === 'loading') {
 		return (
-			<main className='mx-auto max-w-345 px-4 py-8'>
-				<section className='rounded-lg bg-aw-surface p-6 text-aw-subtle'>
-					Загрузка аниме...
-				</section>
+			<main>
+				<EmptyAnimePage />
 			</main>
 		)
 	}

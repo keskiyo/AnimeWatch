@@ -151,7 +151,52 @@ SHIKIMORI_BASE_URL=https://shikimori.one
 SHIKIMORI_GQL_ENDPOINT=https://shikimori.io/api/graphql
 ADMIN_SYNC_TOKEN=                  # пусто = admin sync только с localhost
 ALLOW_SHIKIMORI_BULK_FALLBACK=false
+BACKEND_URL=http://127.0.0.1:3001  # нужен только cron-задаче
+CATALOG_REFRESH_TOKEN=             # секрет для /internal/catalog/refresh (503 если пуст)
+CATALOG_REFRESH_TIMEOUT_MS=7200000 # таймаут refresh-задачи (2 часа)
 ```
+
+---
+
+## 6.1 Автообновление каталога (cron, без Docker)
+
+Раз в день в 04:00 системный cron дёргает защищённый endpoint, который
+запускает recent-sync (свежие сезоны + ongoing/anons) в фоне.
+
+**Endpoints** (требуют `Authorization: Bearer $CATALOG_REFRESH_TOKEN`;
+без настроенного токена отвечают 503 всем):
+
+| Endpoint | Ответ |
+|---|---|
+| `POST /internal/catalog/refresh` | `202 {"status":"started"}`; `409` если уже идёт; `401/403` без/с неверным токеном |
+| `GET /internal/catalog/refresh/status` | lastRunAt, lastSuccessAt, currentlyRunning, lastStatus, lastSummary, lastError |
+
+**Ручной запуск:**
+```bash
+curl -fsS -X POST "$BACKEND_URL/internal/catalog/refresh" \
+  -H "Authorization: Bearer $CATALOG_REFRESH_TOKEN"
+```
+
+**Установка cron** (шаблон: `deploy/cron/catalog-refresh.cron.example`):
+```bash
+crontab deploy/cron/catalog-refresh.cron.example   # или crontab -e и вставить строку
+crontab -l                                         # проверить
+# отключить: crontab -e → удалить/закомментировать строку refresh
+```
+Логи cron: `/var/log/catalog-refresh.log`. Логи задачи — в логах бекенда
+(`catalog_refresh_started/finished/failed/skipped_already_running`).
+
+**Защиты** (`services/catalog_refresh.py`):
+- DB-lock `catalog-refresh-lock` с TTL 2 ч (работает между процессами;
+  освобождается в `finally`, после краша истекает сам) → параллельные запуски невозможны;
+- таймаут `CATALOG_REFRESH_TIMEOUT_MS` → зависшая задача завершается как failed;
+- сам sync **никогда не удаляет** записи (только upsert по PK id) → пустой/упавший
+  ответ Shikimori не трогает каталог; 429/5xx ретраятся с backoff (×3);
+- summary (added/updated/status/errors) сохраняется в sync_state и виден в status.
+
+**Если refresh падает**: смотри `lastError` в status-endpoint и лог бекенда;
+обычно это 429 Shikimori (задача дозапустится завтра, данные целы) или
+неверный токен в cron.
 
 ---
 

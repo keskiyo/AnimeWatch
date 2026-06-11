@@ -1,4 +1,4 @@
-import { FilterSidebar } from '@/features/catalog/components/FilterSidebar'
+import { FilterSidebar } from '@/features/catalog/components/filters/FilterSidebar'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 

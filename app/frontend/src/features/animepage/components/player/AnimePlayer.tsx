@@ -1,6 +1,6 @@
-import { AnimePlayerEpisodes } from '@/features/animepage/components/AnimePlayerEpisodes'
-import { AnimePlayerFrame } from '@/features/animepage/components/AnimePlayerFrame'
-import { AnimePlayerSidebar } from '@/features/animepage/components/AnimePlayerSidebar'
+import { AnimePlayerEpisodes } from '@/features/animepage/components/player/AnimePlayerEpisodes'
+import { AnimePlayerFrame } from '@/features/animepage/components/player/AnimePlayerFrame'
+import { AnimePlayerSidebar } from '@/features/animepage/components/player/AnimePlayerSidebar'
 import { useAnimePlayerState } from '@/features/animepage/hooks/useAnimePlayerState'
 import { useFormattedDate } from '@/features/catalog/hooks/useFormattedDate'
 import type { AnimePlayerProps } from '@/types/animePage'
@@ -42,7 +42,8 @@ export function AnimePlayer({
 	})
 
 	return (
-		<section>
+		// id + scroll-mt: the «Смотреть онлайн» button scrolls here (header is sticky)
+		<section id='watch-player' className='scroll-mt-20'>
 			<div className='mb-3 flex items-center justify-between gap-4'>
 				<h2 className='m-0 text-2xl font-normal leading-tight text-aw-text'>
 					{title}

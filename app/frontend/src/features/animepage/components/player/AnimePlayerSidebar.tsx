@@ -10,6 +10,11 @@ const ITEM_BUTTON =
 const ITEM_ACTIVE = 'bg-[#4f5052] text-aw-accent'
 const ITEM_IDLE = 'text-aw-subtle hover:bg-aw-surface hover:text-aw-text'
 
+// ~13 items (36px row + 4px gap) before the list starts scrolling instead
+// of stretching the page down and breaking the layout
+const TRACK_LIST_SCROLL =
+	'max-h-[516px] overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:var(--color-aw-border)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-aw-border [&::-webkit-scrollbar-track]:bg-transparent'
+
 /** Right column of the player: "Озвучка" / "Плеер" tabs. */
 export function AnimePlayerSidebar({
 	tracks,
@@ -51,7 +56,7 @@ export function AnimePlayerSidebar({
 
 			<div className='mt-3'>
 				{tab === 'dubbing' && (
-					<div className='flex flex-col gap-1'>
+					<div className={`flex flex-col gap-1 ${TRACK_LIST_SCROLL}`}>
 						{tracks.length === 0 ? (
 							<EmptyNote
 								text={
