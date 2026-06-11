@@ -1,6 +1,7 @@
 import { resolveAvatarUrl } from '@/api/authApi'
 import { getPublicUser, type PublicUser } from '@/api/usersApi'
 import { useAuthUser } from '@/features/auth/useAuthUser'
+import { ProfileWatchlist } from '@/features/profile/components/watchlist/ProfileWatchlist'
 import { setPageMeta } from '@/utils/pageMeta'
 import { ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -78,7 +79,7 @@ export function UserProfilePage() {
 		: ''
 
 	return (
-		<main className='mx-auto max-w-345 px-4 py-6.5 pb-10'>
+		<main className='mx-auto grid max-w-345 gap-5 px-4 py-6.5 pb-10'>
 			<section className='rounded-lg bg-aw-surface p-6'>
 				<div className='flex flex-wrap items-center gap-5'>
 					<img
@@ -107,6 +108,7 @@ export function UserProfilePage() {
 					</div>
 				</div>
 			</section>
+			<ProfileWatchlist userId={profile.id} />
 		</main>
 	)
 }

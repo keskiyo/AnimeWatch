@@ -1,51 +1,68 @@
+import { authHeaders } from '@/api/authApi'
 import { apiClient } from '@/api/client'
 import { withFallback } from '@/api/fallback'
 import type { WatchlistEntry, WatchlistStatus } from '@/types/anime'
 
+export type WatchlistToggleResult = {
+	user_id: number
+	anime_id: number
+	status: WatchlistStatus
+	active: boolean
+	statuses: WatchlistStatus[]
+	anime?: WatchlistEntry['anime']
+}
+
 export async function getWatchlist(): Promise<WatchlistEntry[]> {
 	return withFallback(async () => {
-		const response = await apiClient.get<WatchlistEntry[]>('/watchlist')
+		const response = await apiClient.get<WatchlistEntry[]>('/watchlist', {
+			headers: authHeaders(),
+		})
 		return response.data
 	}, [])
 }
 
-export async function addToWatchlist(
+export async function getUserWatchlist(
+	userId: number,
+): Promise<WatchlistEntry[]> {
+	return withFallback(async () => {
+		const response = await apiClient.get<WatchlistEntry[]>(
+			`/users/${userId}/watchlist`,
+		)
+		return response.data
+	}, [])
+}
+
+export async function toggleWatchlistStatus(
 	animeId: number,
 	status: WatchlistStatus,
-	favorite: boolean,
-): Promise<WatchlistEntry> {
-	return withFallback(
-		async () => {
-			const response = await apiClient.post<WatchlistEntry>(
-				'/watchlist',
-				{
-					anime_id: animeId,
-					status,
-					favorite,
-				},
-			)
-
-			return response.data
-		},
+): Promise<WatchlistToggleResult> {
+	const response = await apiClient.post<WatchlistToggleResult>(
+		'/watchlist/toggle',
 		{
 			anime_id: animeId,
-			added_at: new Date().toISOString(),
 			status,
-			favorite,
-			notifications_enabled: true,
 		},
+		{ headers: authHeaders() },
 	)
+
+	return response.data
 }
+
+export const addToWatchlist = toggleWatchlistStatus
 
 export async function markEpisodeWatched(
 	animeId: number,
 	episodeNumber: number,
 ): Promise<void> {
 	await withFallback(async () => {
-		await apiClient.post('/progress', {
-			anime_id: animeId,
-			episode_number: episodeNumber,
-			watched: true,
-		})
+		await apiClient.post(
+			'/progress',
+			{
+				anime_id: animeId,
+				episode_number: episodeNumber,
+				watched: true,
+			},
+			{ headers: authHeaders() },
+		)
 	}, undefined)
 }

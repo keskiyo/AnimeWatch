@@ -11,6 +11,7 @@ import {
 	mapSignupApiError,
 	validateSignup,
 } from '@/utils/authValidation'
+import { notifySuccess } from '@/utils/notify'
 import { isAxiosError } from 'axios'
 import { SyntheticEvent, useState } from 'react'
 
@@ -59,7 +60,12 @@ export function SignupForm({ className, onSuccess }: SignupFormProps) {
 		setSubmitError('')
 		try {
 			// Сервер валидирует повторно — клиентская проверка не защита
-			await register(payload.name, payload.email, payload.password)
+			const user = await register(
+				payload.name,
+				payload.email,
+				payload.password,
+			)
+			notifySuccess(`Аккаунт создан — добро пожаловать, ${user.name}!`)
 			onSuccess()
 		} catch (err) {
 			if (isAxiosError(err)) {

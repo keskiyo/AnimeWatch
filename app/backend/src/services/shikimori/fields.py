@@ -23,7 +23,7 @@ GQL_ANIME_FIELDS = """
     scoresStats { score count }
 """
 
-# Fields for catalog sync: list fields + releasedOn/duration/url (no heavy description)
+# Fields for catalog sync — includes description so it lands in anime_catalog
 GQL_SYNC_FIELDS = """
     id
     name
@@ -38,6 +38,7 @@ GQL_SYNC_FIELDS = """
     releasedOn { date }
     nextEpisodeAt
     duration
+    description
     url
     poster { originalUrl mainUrl previewUrl }
     genres { id russian name kind }

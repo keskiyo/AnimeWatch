@@ -5,6 +5,7 @@ import {
 	SubmitButton,
 } from '@/features/header/components/auth/AuthFormControls'
 import { useAuthUser } from '@/features/auth/useAuthUser'
+import { notifySuccess } from '@/utils/notify'
 import { isAxiosError } from 'axios'
 import { useState, type SyntheticEvent } from 'react'
 
@@ -32,7 +33,8 @@ export function LoginForm({ className, onSuccess }: LoginFormProps) {
 		setIsSubmitting(true)
 		setError('')
 		try {
-			await login(loginValue.trim(), password)
+			const user = await login(loginValue.trim(), password)
+			notifySuccess(`С возвращением, ${user.name}!`)
 			onSuccess()
 		} catch (err) {
 			if (isAxiosError(err) && err.response?.status === 401) {

@@ -91,6 +91,7 @@ export function createInfoRows(
 	}
 
 	// ── Озвучка (from Kodik player) — each team links to its dubbing page ─────
+	// Plain text (no `links`) — rows render as links ONLY when `links` is set
 	if (player?.available) {
 		const translations = player.translations ?? []
 		if (translations.length > 0) {
@@ -98,10 +99,6 @@ export function createInfoRows(
 				label: 'Озвучка',
 				value: translations.map(t => t.title).join(', '),
 				tone: 'accent',
-				links: translations.map(t => ({
-					label: t.title,
-					href: `/dubbing/${encodeURIComponent(t.id)}?name=${encodeURIComponent(t.title)}`,
-				})),
 			})
 		} else if (player.translation) {
 			rows.push({

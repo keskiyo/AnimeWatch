@@ -33,11 +33,11 @@ export function Header() {
 					>
 						{NAV_ITEMS.map(item => (
 							<Link
-								key={item}
-								to={item === 'Аниме' ? '/anime' : '/ongoing'}
+								key={item.path}
+								to={item.path}
 								className='whitespace-nowrap text-[15px] text-aw-subtle transition-colors hover:text-aw-text'
 							>
-								{item}
+								{item.label}
 							</Link>
 						))}
 					</nav>

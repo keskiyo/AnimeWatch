@@ -117,6 +117,13 @@ def set_user_avatar(database_path: str, user_id: int, avatar_url: str) -> None:
     conn.commit()
 
 
+def set_user_name(database_path: str, user_id: int, name: str) -> dict | None:
+    conn = connect(database_path)
+    conn.execute("UPDATE users SET name = ? WHERE id = ?", (name, user_id))
+    conn.commit()
+    return get_user_by_id(database_path, user_id)
+
+
 def set_user_password(database_path: str, user_id: int, password: str) -> None:
     conn = connect(database_path)
     conn.execute(

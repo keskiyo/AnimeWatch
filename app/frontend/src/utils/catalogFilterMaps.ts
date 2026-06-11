@@ -26,7 +26,7 @@ export const GROUP_TO_PARAM: Record<string, string> = {
 // ─── UI label ↔ API value ────────────────────────────────────────────────────
 
 export const LABEL_TO_API: Record<string, string> = {
-	'ТВ-сериал': 'tv',
+	Сериал: 'tv',
 	Фильм: 'movie',
 	OVA: 'ova',
 	ONA: 'ona',

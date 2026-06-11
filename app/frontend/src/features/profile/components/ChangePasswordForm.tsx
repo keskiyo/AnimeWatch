@@ -5,6 +5,7 @@ import {
 	SubmitButton,
 } from '@/features/header/components/auth/AuthFormControls'
 import { validatePassword } from '@/utils/authValidation'
+import { notifySuccess } from '@/utils/notify'
 import { isAxiosError } from 'axios'
 import { useState, type SyntheticEvent } from 'react'
 
@@ -33,6 +34,7 @@ export function ChangePasswordForm() {
 		try {
 			await apiChangePassword(oldPassword, newPassword)
 			setSuccess(true)
+			notifySuccess('Пароль обновлён')
 			setOldPassword('')
 			setNewPassword('')
 		} catch (err) {
@@ -47,7 +49,7 @@ export function ChangePasswordForm() {
 	}
 
 	return (
-		<form className='grid max-w-90 gap-3' onSubmit={onSubmit} noValidate>
+		<form className='grid w-full gap-3' onSubmit={onSubmit} noValidate>
 			<h2 className='text-xl font-bold text-aw-text'>Смена пароля</h2>
 			<PasswordInput
 				name='old_password'

@@ -64,7 +64,10 @@ ON CONFLICT(id) DO UPDATE SET
     title_en = excluded.title_en,
     title_jp = excluded.title_jp,
     poster_url = excluded.poster_url,
-    description = excluded.description,
+    description = CASE
+        WHEN excluded.description != '' THEN excluded.description
+        ELSE anime_catalog.description
+    END,
     genres_json = excluded.genres_json,
     studio = excluded.studio,
     type = excluded.type,
@@ -95,11 +98,27 @@ def connect(database_path: str) -> sqlite3.Connection:
     return _connections[database_path]
 
 
+# Detail-page fields persisted on first visit (lightweight migrations)
+_DETAIL_COLUMNS = [
+    ("source", "TEXT NOT NULL DEFAULT ''"),
+    ("screenshots_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ("directors_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ("authors_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ("characters_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ("detailed_at", "TEXT NOT NULL DEFAULT ''"),
+]
+
+
 def ensure_anime_catalog_schema(database_path: str) -> None:
     conn = connect(database_path)
     conn.execute(_SCHEMA)
     for index_sql in _INDEXES:
         conn.execute(index_sql)
+    for column, definition in _DETAIL_COLUMNS:
+        try:
+            conn.execute(f"ALTER TABLE anime_catalog ADD COLUMN {column} {definition}")
+        except Exception:
+            pass  # column already exists
     conn.commit()
 
 
@@ -154,6 +173,32 @@ def _anime_to_row(anime: Anime, synced_at: str) -> tuple:
     )
 
 
+def save_anime_detail(database_path: str, anime: Anime) -> None:
+    """Persist the full detail payload (roles, screenshots, source) so the
+    anime page can be served straight from SQLite next time."""
+    ensure_anime_catalog_schema(database_path)
+    upsert_anime_catalog_many(database_path, [anime])
+    conn = connect(database_path)
+    conn.execute(
+        """
+        UPDATE anime_catalog SET
+            source = ?, screenshots_json = ?, directors_json = ?,
+            authors_json = ?, characters_json = ?, detailed_at = ?
+        WHERE id = ?
+        """,
+        (
+            anime.get("source") or "",
+            json.dumps(anime.get("screenshots") or [], ensure_ascii=False),
+            json.dumps(anime.get("directors") or [], ensure_ascii=False),
+            json.dumps(anime.get("authors") or [], ensure_ascii=False),
+            json.dumps(anime.get("characters") or [], ensure_ascii=False),
+            datetime.now(tz=UTC).isoformat(),
+            int(anime["id"]),
+        ),
+    )
+    conn.commit()
+
+
 def row_to_anime(row: sqlite3.Row) -> Anime:
     anime: Anime = {
         "id": row["id"],
@@ -182,4 +227,19 @@ def row_to_anime(row: sqlite3.Row) -> Anime:
         anime["rating_mpaa"] = row["rating_mpaa"]  # type: ignore[typeddict-unknown-key]
     if row["duration"]:
         anime["duration"] = row["duration"]  # type: ignore[typeddict-unknown-key]
+
+    # Detail-page fields (present after the migration in ensure_..._schema)
+    keys = row.keys()
+    if "source" in keys and row["source"]:
+        anime["source"] = row["source"]  # type: ignore[typeddict-unknown-key]
+    for column, field in (
+        ("screenshots_json", "screenshots"),
+        ("directors_json", "directors"),
+        ("authors_json", "authors"),
+        ("characters_json", "characters"),
+    ):
+        if column in keys and row[column] and row[column] != "[]":
+            anime[field] = json.loads(row[column])  # type: ignore[literal-required]
+    if "detailed_at" in keys and row["detailed_at"]:
+        anime["detailed_at"] = row["detailed_at"]  # type: ignore[typeddict-unknown-key]
     return anime

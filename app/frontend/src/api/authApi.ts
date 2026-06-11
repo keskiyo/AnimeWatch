@@ -15,7 +15,7 @@ export function clearAuthToken(): void {
 	localStorage.removeItem(TOKEN_KEY)
 }
 
-function authHeaders() {
+export function authHeaders() {
 	const token = getAuthToken()
 	return token ? { Authorization: `Bearer ${token}` } : {}
 }
@@ -95,4 +95,13 @@ export async function apiChangePassword(
 		{ old_password: oldPassword, new_password: newPassword },
 		{ headers: authHeaders() },
 	)
+}
+
+export async function apiUpdateProfile(name: string): Promise<AuthUser> {
+	const response = await apiClient.patch<AuthUser>(
+		'/auth/profile',
+		{ name },
+		{ headers: authHeaders() },
+	)
+	return response.data
 }

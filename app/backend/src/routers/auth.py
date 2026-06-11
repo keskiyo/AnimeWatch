@@ -12,6 +12,7 @@ from src.services.auth import (
     login_user,
     logout_user,
     register_user,
+    update_profile,
 )
 from src.services.avatars import (
     MAX_UPLOAD_BYTES,
@@ -117,6 +118,18 @@ def change_password_route(
             str(body.get("new_password") or ""),
         )
         return {"success": True}
+    except AuthError as error:
+        _raise(error)
+        raise
+
+
+@router.patch("/profile")
+def update_profile_route(
+    body: dict = Body(...),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    try:
+        return update_profile(_bearer(authorization), str(body.get("name") or ""))
     except AuthError as error:
         _raise(error)
         raise

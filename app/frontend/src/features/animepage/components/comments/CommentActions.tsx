@@ -2,6 +2,7 @@ import { voteAnimeComment } from '@/api/commentsApi'
 import { openAuthModal } from '@/features/auth/authModalBus'
 import { useAuthUser } from '@/features/auth/useAuthUser'
 import type { AnimeComment } from '@/types/reviews'
+import { notifyError } from '@/utils/notify'
 import { ThumbsDown, ThumbsUp } from 'lucide-react'
 import { useState, type KeyboardEvent } from 'react'
 
@@ -39,6 +40,8 @@ export function CommentActions({ comment, onReply }: CommentActionsProps) {
 			setLikes(result.likes)
 			setDislikes(result.dislikes)
 			setMyVote(result.my_vote)
+		} catch {
+			notifyError('Не удалось проголосовать. Попробуйте позже.')
 		} finally {
 			setIsBusy(false)
 		}
@@ -52,6 +55,8 @@ export function CommentActions({ comment, onReply }: CommentActionsProps) {
 			await onReply(text)
 			setReplyText('')
 			setIsReplying(false)
+		} catch {
+			notifyError('Не удалось отправить ответ. Попробуйте позже.')
 		} finally {
 			setIsBusy(false)
 		}
@@ -71,7 +76,7 @@ export function CommentActions({ comment, onReply }: CommentActionsProps) {
 					type='button'
 					onClick={() => void vote(1)}
 					aria-label='Нравится'
-					className={`${ACTION_BUTTON} ${myVote === 1 ? 'text-aw-accent' : ''}`}
+					className={`${ACTION_BUTTON} ${myVote === 1 ? 'text-aw-accent!' : ''}`}
 				>
 					<ThumbsUp size={16} aria-hidden='true' />
 					{likes > 0 && <span>{likes}</span>}
@@ -80,7 +85,7 @@ export function CommentActions({ comment, onReply }: CommentActionsProps) {
 					type='button'
 					onClick={() => void vote(-1)}
 					aria-label='Не нравится'
-					className={`${ACTION_BUTTON} ${myVote === -1 ? 'text-aw-accent' : ''}`}
+					className={`${ACTION_BUTTON} ${myVote === -1 ? 'text-aw-accent!' : ''}`}
 				>
 					<ThumbsDown size={16} aria-hidden='true' />
 					{dislikes > 0 && <span>{dislikes}</span>}

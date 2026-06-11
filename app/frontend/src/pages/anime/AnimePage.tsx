@@ -6,6 +6,7 @@ import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import type { AnimePageData } from '@/types/animePage'
 import { createAnimePageData } from '@/utils/animePageData'
 import { parseAnimeSlugId } from '@/utils/animeSlug'
+import { setPageMeta } from '@/utils/pageMeta'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
@@ -23,6 +24,7 @@ export function AnimePage() {
 		let isCancelled = false
 
 		async function loadAnimePage() {
+			setPageMeta('AnimeWatch')
 			if (!id) {
 				setState({ status: 'not-found' })
 				return
@@ -30,22 +32,34 @@ export function AnimePage() {
 
 			setState({ status: 'loading' })
 
-			const [anime, player, related] = await Promise.all([
-				getAnime(id),
+			const anime = await getAnime(id)
+			if (isCancelled) return
+
+			if (!anime) {
+				setState({ status: 'not-found' })
+				return
+			}
+
+			setPageMeta(
+				`${anime.title_ru || anime.title_en || 'Аниме'} — AnimeWatch`,
+				anime.description,
+			)
+			setState({
+				status: 'ready',
+				data: createAnimePageData(anime),
+			})
+
+			const [player, related] = await Promise.all([
 				getKodikPlayer(id, 1),
 				getRelated(id),
 			])
 
-			if (isCancelled) return
-
-			setState(
-				anime
-					? {
-							status: 'ready',
-							data: createAnimePageData(anime, player, related),
-						}
-					: { status: 'not-found' },
-			)
+			if (!isCancelled) {
+				setState({
+					status: 'ready',
+					data: createAnimePageData(anime, player, related),
+				})
+			}
 		}
 
 		void loadAnimePage()

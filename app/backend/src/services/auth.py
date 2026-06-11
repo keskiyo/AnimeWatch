@@ -11,6 +11,7 @@ from src.db.users import (
     ensure_users_schema,
     find_user_by_login,
     get_user_by_token,
+    set_user_name,
     set_user_password,
     verify_password,
 )
@@ -92,6 +93,20 @@ def change_password(token: str | None, old_password: str, new_password: str) -> 
         raise AuthError("validation", "Новый пароль должен быть от 8 до 128 символов")
     set_user_password(db, user["id"], new_password)
     log.info("auth: password changed for user id=%s", user["id"])
+
+
+def update_profile(token: str | None, name: str) -> dict:
+    user = get_current_user(token)
+    name = name.strip()
+    if not name or len(name) < 2 or len(name) > 50 or not _NAME_RE.match(name):
+        raise AuthError("validation", "Некорректное имя")
+    existing = find_user_by_login(_db(), name)
+    if existing and existing["id"] != user["id"]:
+        raise AuthError("email_taken", "Пользователь уже зарегистрирован")
+    updated = set_user_name(_db(), user["id"], name)
+    if not updated:
+        raise AuthError("unauthorized", "Сессия истекла")
+    return updated
 
 
 def seed_admin_user() -> None:

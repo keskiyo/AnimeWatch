@@ -2,7 +2,12 @@ export type AnimeType = 'tv' | 'ova' | 'movie' | 'ona' | 'special'
 export type AnimeStatus = 'ongoing' | 'released' | 'announced'
 export type AnimeSeason = 'winter' | 'spring' | 'summer' | 'fall'
 export type PlayerName = 'kodik' | 'aniboom'
-export type WatchlistStatus = 'watching' | 'planned' | 'completed' | 'dropped'
+export type WatchlistStatus =
+	| 'watching'
+	| 'plan_to_watch'
+	| 'completed'
+	| 'on_hold'
+	| 'dropped'
 
 export type Anime = {
 	id: number
@@ -67,22 +72,14 @@ export type ScheduleEntry = {
 }
 
 export type WatchlistEntry = {
+	user_id?: number
 	anime_id: number
 	added_at: string
 	status: WatchlistStatus
-	favorite: boolean
-	notifications_enabled: boolean
+	favorite?: boolean
+	notifications_enabled?: boolean
 	last_watched_episode?: number
 	anime?: Anime
-}
-
-export type AppSettings = {
-	default_player: 'auto' | PlayerName
-	default_quality: 'auto' | '360p' | '480p' | '720p' | '1080p'
-	default_dubbing: 'auto' | 'AniLibria' | 'SovetRomantica' | 'AnimeVost'
-	theme: 'dark'
-	notifications_enabled: boolean
-	cache_size_limit: number
 }
 
 export type RelatedAnime = {
@@ -123,9 +120,7 @@ export type KodikPlayer =
 			quality: string
 			episodes_count: number
 			screenshots: string[]
-			/** Per-episode titles from Kodik (if available). Key = episode number as string. */
 			episode_titles?: Record<string, string>
-			/** All available dubbing teams (one Kodik result per translation). */
 			translations?: KodikTranslation[]
 	  }
 	| {

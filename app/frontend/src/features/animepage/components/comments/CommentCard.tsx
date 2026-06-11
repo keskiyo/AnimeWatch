@@ -4,6 +4,7 @@ import { CommentActionsMenu } from '@/features/animepage/components/comments/Com
 import { FormattedText } from '@/features/animepage/components/comments/FormattedText'
 import { useAuthUser } from '@/features/auth/useAuthUser'
 import type { AnimeComment } from '@/types/reviews'
+import { notifyError, notifySuccess } from '@/utils/notify'
 import { Dot } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
@@ -42,6 +43,8 @@ export function CommentCard({
 		try {
 			await onEdit(comment.id, text)
 			setIsEditing(false)
+		} catch {
+			notifyError('Не удалось сохранить изменения. Попробуйте позже.')
 		} finally {
 			setIsBusy(false)
 		}
@@ -86,9 +89,16 @@ export function CommentCard({
 							}}
 							onDelete={() => {
 								setIsBusy(true)
-								void onDelete(comment.id).finally(() =>
-									setIsBusy(false),
-								)
+								void onDelete(comment.id)
+									.then(() =>
+										notifySuccess('Комментарий удалён'),
+									)
+									.catch(() =>
+										notifyError(
+											'Не удалось удалить комментарий',
+										),
+									)
+									.finally(() => setIsBusy(false))
 							}}
 						/>
 					)}
@@ -122,7 +132,7 @@ export function CommentCard({
 					</div>
 				) : (
 					<>
-						<p className='m-0 mt-1.5 whitespace-pre-line wrap-break-word leading-relaxed text-aw-text'>
+						<p className='m-0 whitespace-pre-line wrap-break-word leading-relaxed text-aw-text'>
 							<FormattedText text={comment.text} />
 						</p>
 						<CommentActions

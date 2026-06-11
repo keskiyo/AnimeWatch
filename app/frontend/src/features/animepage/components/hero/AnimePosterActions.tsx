@@ -1,4 +1,6 @@
+import { PosterImage } from '@/components/anime/PosterImage'
 import { Lightbox } from '@/features/animepage/components/frames/Lightbox'
+import { WatchlistActions } from '@/features/animepage/components/hero/WatchlistActions'
 import type { Anime, KodikPlayer } from '@/types/anime'
 import { formatWatchCounter } from '@/utils/animePageFormatters'
 import { proxyImage } from '@/utils/imageProxy'
@@ -25,10 +27,11 @@ export function AnimePosterActions({ anime, player }: AnimePosterActionsProps) {
 		<div className='w-62.5 shrink-0 max-[760px]:w-full'>
 			<div className='relative flex aspect-2/3 w-full items-end justify-center overflow-hidden rounded-md bg-aw-elevated'>
 				{anime.poster_url ? (
-					<img
+					<PosterImage
 						className='h-full w-full cursor-zoom-in object-cover transition-opacity hover:opacity-90'
-						src={posterSrc}
-						alt={`${anime.title_en} poster`}
+						url={anime.poster_url}
+						title={anime.title_en || anime.title_ru}
+						loading='eager'
 						onClick={() => setLightboxOpen(true)}
 					/>
 				) : (
@@ -62,6 +65,7 @@ export function AnimePosterActions({ anime, player }: AnimePosterActionsProps) {
 					</span>
 					{watchCounter && <span>{watchCounter}</span>}
 				</button>
+				<WatchlistActions animeId={anime.id} />
 			</div>
 		</div>
 	)

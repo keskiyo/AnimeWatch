@@ -5,7 +5,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import httpx
-from httpx import HTTPStatusError, TimeoutException
+from httpx import HTTPStatusError, TransportError
 
 from src.config import Settings
 from src.logger import get_logger
@@ -64,10 +64,15 @@ async def fetch_gql(query: str, settings: Settings) -> Any:
                     if body.get("data") is None:
                         raise RuntimeError("GQL query failed: " + "; ".join(msgs))
                 return body.get("data") or {}
-            except TimeoutException:
+            except TransportError as e:
+                # Covers ConnectError/timeouts — Shikimori unreachable, retry
                 if attempt == max_retries - 1:
                     raise
-                await asyncio.sleep(2**attempt)
+                log.warning(
+                    "[gql] %s (attempt %d/%d) — retrying",
+                    type(e).__name__, attempt + 1, max_retries,
+                )
+                await asyncio.sleep(2 ** (attempt + 1))
             except HTTPStatusError as e:
                 if e.response.status_code == 429 or e.response.status_code >= 500:
                     if attempt == max_retries - 1:
@@ -105,10 +110,15 @@ async def fetch_rest_json(
                 )
                 response.raise_for_status()
                 return response.json()
-            except TimeoutException:
+            except TransportError as e:
+                # Covers ConnectError/timeouts — Shikimori unreachable, retry
                 if attempt == max_retries - 1:
                     raise
-                await asyncio.sleep(2**attempt)
+                log.warning(
+                    "[rest] %s: %s (attempt %d/%d) — retrying",
+                    path, type(e).__name__, attempt + 1, max_retries,
+                )
+                await asyncio.sleep(2 ** (attempt + 1))
             except HTTPStatusError as e:
                 if e.response.status_code == 429 or e.response.status_code >= 500:
                     if attempt == max_retries - 1:

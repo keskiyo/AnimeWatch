@@ -5,7 +5,7 @@ Architecture:
     source of truth for /api/anime/bulk — it survives restarts;
   - FULL sync (manual: CLI or POST /admin/sync/shikimori/full) walks years
     to_year → from_year, seasons winter/spring/summer/fall;
-  - RECENT sync (weekly, auto on startup) refreshes only from_year..now
+  - RECENT sync (daily, auto on startup) refreshes only from_year..now
     plus all ongoing/anons titles;
   - id discovery and GQL detail batches live in sync_sources.py; everything
     is sequential behind a conservative rate limiter (~70 rpm, limit 90);
@@ -41,7 +41,7 @@ from src.services.shikimori.sync_sources import (
 log = get_logger(__name__)
 
 _RECENT_DEFAULT_FROM_YEAR = 2026
-_WEEKLY_INTERVAL_SECONDS = 7 * 24 * 3600
+_AUTO_REFRESH_INTERVAL_SECONDS = 24 * 3600
 
 # In-process guard: never run two syncs at once in the same backend
 _sync_lock = asyncio.Lock()
@@ -79,9 +79,19 @@ async def sync_shikimori_catalog_full(
             for year in range(to_year, from_year - 1, -1):
                 year_ids: list[int] = []
                 for season in SEASONS:
-                    season_ids = await fetch_shikimori_ids_by_season(
-                        year, season, env, sync_rate_limiter
-                    )
+                    try:
+                        season_ids = await fetch_shikimori_ids_by_season(
+                            year, season, env, sync_rate_limiter
+                        )
+                    except Exception as exc:
+                        # Network blip (ConnectError etc.) must not kill the
+                        # whole multi-hour run — skip the season, keep going.
+                        log.warning(
+                            "[sync-full] year=%d season=%s skipped: %s",
+                            year, season, exc,
+                        )
+                        await asyncio.sleep(5)
+                        continue
                     log.info(
                         "[sync-full] year=%d season=%s ids=%d",
                         year,
@@ -161,10 +171,17 @@ async def sync_shikimori_catalog_recent(
 
             for year in range(to_year, from_year - 1, -1):
                 for season in SEASONS:
-                    season_ids = await fetch_shikimori_ids_by_season(
-                        year, season, env, sync_rate_limiter
-                    )
-                    all_ids.update(season_ids)
+                    try:
+                        season_ids = await fetch_shikimori_ids_by_season(
+                            year, season, env, sync_rate_limiter
+                        )
+                        all_ids.update(season_ids)
+                    except Exception as exc:
+                        log.warning(
+                            "[sync-recent] year=%d season=%s skipped: %s",
+                            year, season, exc,
+                        )
+                        await asyncio.sleep(5)
 
             # Ongoing/announced titles can have started in older years —
             # refresh them too so episode counts/next_episode_at stay fresh.
@@ -219,7 +236,7 @@ async def _fetch_and_save(ids: list[int], env: Settings) -> int:
 # ── Weekly auto-refresh (startup hook) ───────────────────────────────────────
 
 
-async def maybe_start_weekly_recent_sync(settings: Settings | None = None) -> None:
+async def maybe_start_daily_recent_sync(settings: Settings | None = None) -> None:
     """If the last recent sync is older than 7 days (or missing), run one in
     the background. Never blocks startup, never starts a second sync."""
     env = settings or get_settings()
@@ -230,7 +247,7 @@ async def maybe_start_weekly_recent_sync(settings: Settings | None = None) -> No
         try:
             last_dt = datetime.fromisoformat(last)
             age = (datetime.now(tz=UTC) - last_dt).total_seconds()
-            if age < _WEEKLY_INTERVAL_SECONDS:
+            if age < _AUTO_REFRESH_INTERVAL_SECONDS:
                 log.info(
                     "[sync-recent] last run %.1f days ago — skipping", age / 86400
                 )
@@ -239,10 +256,10 @@ async def maybe_start_weekly_recent_sync(settings: Settings | None = None) -> No
             pass
 
     if _sync_lock.locked():
-        log.info("[sync-recent] sync already running — skipping weekly check")
+        log.info("[sync-recent] sync already running — skipping daily check")
         return
 
-    log.info("[sync-recent] weekly refresh due — starting in background")
+    log.info("[sync-recent] daily refresh due — starting in background")
 
     async def _run() -> None:
         try:

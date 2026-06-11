@@ -1,10 +1,14 @@
-"""Related anime (sequels, prequels, …) via REST."""
+"""Related anime (sequels, prequels, …) via REST, with stale-cache fallback."""
 
 from src.config import Settings, get_settings
-from src.db.cache import get_cached_json
+from src.logger import get_logger
 from src.services.shikimori.helpers import get_cache
 from src.services.shikimori.http import fetch_rest_json
 from src.services.shikimori.normalizers import normalize_related
+
+log = get_logger(__name__)
+
+_RELATED_TTL = 86400
 
 
 async def fetch_shikimori_related(
@@ -13,10 +17,20 @@ async def fetch_shikimori_related(
     if anime_id <= 0:
         return []
     env = settings or get_settings()
-    raw = await get_cached_json(
-        get_cache(env),
-        f"shikimori:anime:related:{anime_id}",
-        86400,
-        lambda: fetch_rest_json(f"/api/animes/{anime_id}/related", env),
-    )
-    return normalize_related(raw, env.shikimori_endpoint)
+    cache = get_cache(env)
+    key = f"shikimori:anime:related:{anime_id}"
+
+    cached = cache.get_json(key)
+    if cached and cached[1]:  # fresh
+        return normalize_related(cached[0], env.shikimori_endpoint)
+
+    try:
+        raw = await fetch_rest_json(f"/api/animes/{anime_id}/related", env)
+        cache.set_json(key, raw, _RELATED_TTL)
+        return normalize_related(raw, env.shikimori_endpoint)
+    except Exception as exc:
+        # Shikimori unreachable (e.g. ConnectError) — expired cache beats nothing
+        log.warning("[related] %d fetch failed: %s — serving stale cache", anime_id, exc)
+        if cached:
+            return normalize_related(cached[0], env.shikimori_endpoint)
+        raise

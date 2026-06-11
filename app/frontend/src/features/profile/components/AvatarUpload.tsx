@@ -1,6 +1,7 @@
 import { apiUploadAvatar, resolveAvatarUrl } from '@/api/authApi'
 import { useAuthUser } from '@/features/auth/useAuthUser'
 import type { AuthUser } from '@/types/auth'
+import { notifyError, notifySuccess } from '@/utils/notify'
 import { Camera } from 'lucide-react'
 import { useRef, useState } from 'react'
 
@@ -16,26 +17,25 @@ export function AvatarUpload({ user }: AvatarUploadProps) {
 	const { refresh } = useAuthUser()
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [isUploading, setIsUploading] = useState(false)
-	const [error, setError] = useState('')
 
 	async function onFileSelected(file: File | undefined) {
 		if (!file) return
 		if (!file.type.startsWith('image/')) {
-			setError('Выберите изображение')
+			notifyError('Выберите изображение')
 			return
 		}
 		if (file.size > MAX_SIZE_BYTES) {
-			setError('Файл больше 5 МБ')
+			notifyError('Файл больше 5 МБ')
 			return
 		}
 
 		setIsUploading(true)
-		setError('')
 		try {
 			await apiUploadAvatar(file)
 			await refresh() // new avatar_url (with cache-bust version)
+			notifySuccess('Аватар обновлён')
 		} catch {
-			setError('Не удалось загрузить аватар')
+			notifyError('Не удалось загрузить аватар')
 		} finally {
 			setIsUploading(false)
 			if (inputRef.current) inputRef.current.value = ''
@@ -73,7 +73,6 @@ export function AvatarUpload({ user }: AvatarUploadProps) {
 			{isUploading && (
 				<span className='text-xs text-aw-subtle'>Загрузка…</span>
 			)}
-			{error && <span className='text-xs text-aw-accent'>{error}</span>}
 		</div>
 	)
 }

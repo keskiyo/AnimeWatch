@@ -1,6 +1,8 @@
 import { useAuthUser } from '@/features/auth/useAuthUser'
 import { AvatarUpload } from '@/features/profile/components/AvatarUpload'
-import { ChangePasswordForm } from '@/features/profile/components/ChangePasswordForm'
+import { ProfileSettings } from '@/features/profile/components/ProfileSettings'
+import { ProfileWatchlist } from '@/features/profile/components/watchlist/ProfileWatchlist'
+import { notifyInfo } from '@/utils/notify'
 import { setPageMeta } from '@/utils/pageMeta'
 import { LogOut, ShieldCheck } from 'lucide-react'
 import { useEffect } from 'react'
@@ -32,6 +34,7 @@ export function ProfilePage() {
 
 	async function onLogout() {
 		await logout()
+		notifyInfo('Вы вышли из аккаунта')
 		navigate('/')
 	}
 
@@ -61,20 +64,20 @@ export function ProfilePage() {
 							На сайте с {registeredAt}
 						</p>
 					</div>
-					<button
-						type='button'
-						onClick={onLogout}
-						className='ml-auto inline-flex cursor-pointer items-center gap-2 rounded-md border border-aw-border bg-aw-elevated px-4 py-2 text-sm text-aw-text transition-colors hover:border-aw-accent hover:text-aw-accent'
-					>
-						<LogOut size={16} aria-hidden='true' />
-						Выйти
-					</button>
+					<div className='ml-auto grid justify-items-end gap-2 max-sm:ml-0 max-sm:w-full max-sm:justify-items-stretch'>
+						<ProfileSettings user={user} />
+						<button
+							type='button'
+							onClick={onLogout}
+							className='inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-aw-border bg-aw-elevated px-4 py-2 text-sm text-aw-text transition-colors hover:border-aw-accent hover:text-aw-accent'
+						>
+							<LogOut size={16} aria-hidden='true' />
+							Выйти
+						</button>
+					</div>
 				</div>
 			</section>
-
-			<section className='rounded-lg bg-aw-surface p-6'>
-				<ChangePasswordForm />
-			</section>
+			<ProfileWatchlist userId={user.id} isOwn />
 		</main>
 	)
 }

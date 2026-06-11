@@ -52,12 +52,12 @@ export function HeaderMobileMenu({
 					<nav className='grid gap-1' aria-label='Мобильная навигация'>
 						{NAV_ITEMS.map(item => (
 							<Link
-								key={item}
-								to={item === 'Аниме' ? '/anime' : '/ongoing'}
+								key={item.path}
+								to={item.path}
 								className='rounded-md px-3 py-2 text-aw-text transition-colors hover:bg-aw-elevated'
 								onClick={() => setIsOpen(false)}
 							>
-								{item}
+								{item.label}
 							</Link>
 						))}
 					</nav>

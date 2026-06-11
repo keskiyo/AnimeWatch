@@ -69,7 +69,7 @@ export function SubmitButton({
 		<button
 			type='submit'
 			disabled={disabled}
-			className='mx-auto mt-1 h-10 w-50 cursor-pointer rounded-md border-2 border-aw-border bg-aw-accent text-[15px] font-semibold text-white shadow-[4px_4px_0_0_rgba(0,0,0,0.45)] transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-[4px_4px_0_0_rgba(0,0,0,0.45)]'
+			className='mx-auto mt-1 h-10 w-50 cursor-pointer rounded-md border-2 border-aw-border bg-aw-accent text-[15px] font-semibold text-white shadow-[4px_4px_0_0_rgba(0,0,0,0.45)] transition active:translate-x-0.75 active:translate-y-0.75 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-[4px_4px_0_0_rgba(0,0,0,0.45)]'
 		>
 			{children}
 		</button>

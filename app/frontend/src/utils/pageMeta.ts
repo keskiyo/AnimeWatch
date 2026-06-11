@@ -1,8 +1,10 @@
 /** Set document title and the meta description tag (created on demand). */
+const DEFAULT_DESCRIPTION =
+	'AnimeWatch - каталог аниме, онгоингов и страниц тайтлов.'
+
 export function setPageMeta(title: string, description?: string) {
 	document.title = title
 
-	if (!description) return
 	let meta = document.querySelector<HTMLMetaElement>(
 		'meta[name="description"]',
 	)
@@ -11,5 +13,5 @@ export function setPageMeta(title: string, description?: string) {
 		meta.name = 'description'
 		document.head.appendChild(meta)
 	}
-	meta.content = description
+	meta.content = description?.trim() || DEFAULT_DESCRIPTION
 }

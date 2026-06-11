@@ -4,24 +4,15 @@ import type {
 	SortOption,
 } from '@/types/catalog'
 
-export const NAV_ITEMS = ['Аниме', 'Онгоинг'] as const
+export const NAV_ITEMS = [
+	{ label: 'Аниме', path: '/anime' },
+	{ label: 'Онгоинг', path: '/ongoing' },
+] as const
 
 export const CATALOG_VIEW_MODES: CatalogViewModeOption[] = [
-	{
-		id: 'poster',
-		label: 'Постеры',
-		limit: 12,
-	},
-	{
-		id: 'compact',
-		label: 'Компактно',
-		limit: 12,
-	},
-	{
-		id: 'list',
-		label: 'Список',
-		limit: 12,
-	},
+	{ id: 'poster', label: 'Постеры', limit: 12 },
+	{ id: 'compact', label: 'Компактно', limit: 12 },
+	{ id: 'list', label: 'Список', limit: 12 },
 ]
 
 export const sortOptions: SortOption[] = [

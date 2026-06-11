@@ -12,12 +12,13 @@ import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { UserProfilePage } from '@/pages/profile/UserProfilePage'
 import { StudioPage } from '@/pages/studio/StudioPage'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 export function App() {
 	return (
 		<BrowserRouter>
-			{/* Sticky footer: page content stretches, footer stays at the bottom */}
 			<div className='flex min-h-dvh flex-col'>
 				<Header />
 				<div className='flex-1'>
@@ -54,6 +55,11 @@ export function App() {
 					</Routes>
 				</div>
 				<Footer />
+				<ToastContainer
+					theme='dark'
+					position='bottom-right'
+					autoClose={2200}
+				/>
 			</div>
 		</BrowserRouter>
 	)

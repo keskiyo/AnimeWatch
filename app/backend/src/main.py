@@ -20,7 +20,7 @@ from src.routers.library import router as library_router
 from src.routers.player import router as player_router
 from src.routers.system import router as system_router
 from src.services.auth import seed_admin_user
-from src.services.shikimori.sync import maybe_start_weekly_recent_sync
+from src.services.shikimori.sync import maybe_start_daily_recent_sync
 
 env = get_settings()
 app = FastAPI(title="AnimeWatch API")
@@ -54,4 +54,4 @@ async def _startup() -> None:
     ensure_anime_catalog_schema(env.database_path)
     ensure_sync_state_schema(env.database_path)
     seed_admin_user()
-    await maybe_start_weekly_recent_sync(env)
+    await maybe_start_daily_recent_sync(env)

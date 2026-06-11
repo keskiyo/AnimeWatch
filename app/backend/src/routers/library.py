@@ -1,38 +1,79 @@
 """User library routes: watchlist, progress, settings, notifications."""
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Header, HTTPException
 
+from src.services.auth import AuthError, get_current_user
 from src.services.library import (
-    delete_watchlist_item,
     get_app_settings,
     get_notifications,
     get_progress,
-    get_watchlist,
     mark_notification_read,
     merge_settings,
     upsert_progress,
-    upsert_watchlist_item,
+)
+from src.services.watchlist import (
+    delete_user_watchlist_anime,
+    get_user_watchlist,
+    toggle_user_watchlist_status,
 )
 
 router = APIRouter(prefix="/api", tags=["library"])
 
 
-@router.get("/watchlist")
-async def watchlist() -> list[dict]:
-    return await get_watchlist()
+def _bearer(authorization: str | None) -> str | None:
+    if authorization and authorization.startswith("Bearer "):
+        return authorization.removeprefix("Bearer ").strip()
+    return None
 
 
-@router.post("/watchlist")
-async def watchlist_upsert(body: dict = Body(...)) -> dict:
+def _current_user(authorization: str | None) -> dict:
     try:
-        return await upsert_watchlist_item(body)
+        return get_current_user(_bearer(authorization))
+    except AuthError as error:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": error.code, "message": error.message},
+        ) from error
+
+
+@router.get("/watchlist")
+async def watchlist(authorization: str | None = Header(default=None)) -> list[dict]:
+    user = _current_user(authorization)
+    return await get_user_watchlist(user["id"])
+
+
+@router.get("/users/{user_id}/watchlist")
+async def public_user_watchlist(user_id: int) -> list[dict]:
+    return await get_user_watchlist(user_id)
+
+
+@router.post("/watchlist/toggle")
+async def watchlist_toggle(
+    body: dict = Body(...),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    user = _current_user(authorization)
+    try:
+        return await toggle_user_watchlist_status(user["id"], body)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.post("/watchlist")
+async def watchlist_upsert(
+    body: dict = Body(...),
+    authorization: str | None = Header(default=None),
+) -> dict:
+    return await watchlist_toggle(body, authorization)
+
+
 @router.delete("/watchlist/{anime_id}")
-def watchlist_delete(anime_id: int) -> dict:
-    return delete_watchlist_item(anime_id)
+def watchlist_delete(
+    anime_id: int,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    user = _current_user(authorization)
+    return delete_user_watchlist_anime(user["id"], anime_id)
 
 
 @router.get("/progress/{anime_id}")

@@ -1,6 +1,11 @@
 from src.config import get_settings
+from datetime import UTC, datetime
+
+from src.db.anime_catalog import save_anime_detail
+from src.db.anime_catalog_queries import get_anime_catalog_by_id
 from src.logger import get_logger
 from src.models import Anime
+from src.services.catalog_filter import filter_anime_catalog
 from src.services.shikimori import (
     fetch_shikimori_anime,
     fetch_shikimori_anime_by_studio,
@@ -13,15 +18,6 @@ from src.services.yummyanime import fetch_yummyanime_description
 
 log = get_logger(__name__)
 
-SORTERS: dict[str, object] = {
-    "rating": lambda item: float(item.get("rating", 0)),
-    "date": lambda item: int(item.get("year", 0)),
-    "novelty": lambda item: int(item.get("year", 0)),
-    "popularity": lambda item: int(item.get("score_count", 0)),
-    "startDate": lambda item: int(item.get("year", 0)),
-    "createdAt": lambda item: int(item.get("year", 0)),
-}
-
 
 async def get_anime_catalog(query: dict[str, str | None]) -> dict:
     try:
@@ -33,9 +29,8 @@ async def get_anime_catalog(query: dict[str, str | None]) -> dict:
 
 async def get_bulk_anime_catalog() -> dict:
     """
-    Return the full catalog from the LOCAL anime_catalog table (no Shikimori
-    calls). If the table is empty the response carries needs_sync=true —
-    run `python -m src.scripts.sync_shikimori full` to populate it.
+    Return the full catalog from the local anime_catalog table. If the table is
+    empty the response carries needs_sync=true.
     """
     items = await fetch_shikimori_bulk_catalog(get_settings())
     result = {"data": items, "total": len(items)}
@@ -45,11 +40,7 @@ async def get_bulk_anime_catalog() -> dict:
 
 
 async def get_dubbing_anime(translation_id: int) -> dict:
-    """Return anime voiced by the given Kodik dubbing team (translation id).
-
-    Kodik /list gives Shikimori ids; details come from the bulk catalog cache
-    so no extra Shikimori requests are made.
-    """
+    """Return anime voiced by the given Kodik dubbing team."""
     from src.services.kodik import get_dubbing_shikimori_ids
 
     try:
@@ -66,7 +57,7 @@ async def get_dubbing_anime(translation_id: int) -> dict:
 
 
 async def get_studio_anime(studio_name: str) -> dict:
-    """Return all anime for a studio, fetched directly from Shikimori (1 h SQLite cache)."""
+    """Return all anime for a studio."""
     try:
         items = await fetch_shikimori_anime_by_studio(studio_name, get_settings())
         return {"data": items, "total": len(items), "studio": studio_name}
@@ -76,7 +67,7 @@ async def get_studio_anime(studio_name: str) -> dict:
 
 
 async def get_anime_related(anime_id: int) -> list[dict]:
-    """Return related anime (sequels, prequels, etc.) for *anime_id*."""
+    """Return related anime (sequels, prequels, etc.) for anime_id."""
     try:
         return await fetch_shikimori_related(anime_id, get_settings())
     except Exception as error:
@@ -84,13 +75,41 @@ async def get_anime_related(anime_id: int) -> list[dict]:
         return []
 
 
-async def get_anime_by_id(anime_id: int) -> Anime | None:
+_DETAIL_TTL_SECONDS = 24 * 3600
+
+
+def _detail_is_fresh(anime: Anime) -> bool:
+    """True when the local row already holds detail data younger than 24 h."""
+    detailed_at = anime.get("detailed_at")  # type: ignore[typeddict-item]
+    if not detailed_at:
+        return False
     try:
-        env = get_settings()
+        saved = datetime.fromisoformat(str(detailed_at))
+    except ValueError:
+        return False
+    return (datetime.now(tz=UTC) - saved).total_seconds() < _DETAIL_TTL_SECONDS
+
+
+async def get_anime_by_id(anime_id: int) -> Anime | None:
+    """Anime detail, DB-first:
+
+    1. Local anime_catalog row with fresh detail data (<24 h) → instant, no
+       external calls at all.
+    2. Otherwise: Shikimori (description included) → YummyAnime only as the
+       last resort for a missing description → SAVE the full detail payload
+       (roles, screenshots, source) into anime_catalog.
+    3. Shikimori unreachable → serve whatever the local row has.
+    """
+    env = get_settings()
+    local = get_anime_catalog_by_id(env.database_path, anime_id)
+    if local is not None and _detail_is_fresh(local):
+        return local
+
+    try:
         anime = await fetch_shikimori_anime(anime_id, env)
         if anime is None:
-            return None
-        # If Shikimori has no description, try YummyAnime as fallback
+            return local
+
         if not (anime.get("description") or "").strip():
             desc = await fetch_yummyanime_description(
                 shikimori_id=anime["id"],
@@ -103,112 +122,10 @@ async def get_anime_by_id(anime_id: int) -> Anime | None:
             )
             if desc:
                 anime["description"] = desc  # type: ignore[typeddict-unknown-key]
+
+        # Persist EVERYTHING the page needs — next visit is served from SQLite
+        save_anime_detail(env.database_path, anime)
         return anime
     except Exception as error:
         log.error("anime detail %d: %s", anime_id, error)
-        return None
-
-
-def filter_anime_catalog(anime: list[Anime], query: dict[str, str | None]) -> dict:
-    search = (query.get("search") or "").strip().lower()
-    page = _positive_int(query.get("page"), 1)
-    limit = min(_positive_int(query.get("limit"), 24), 50)
-    sort = query.get("sort") or "popularity"
-    order = query.get("order") or "desc"
-    strict = query.get("strict") == "1"
-
-    # Year range: yearFrom/yearTo replace the old single "year".
-    # Still accept "year" for backwards compat.
-    year_from = _optional_int(query.get("yearFrom")) or _optional_int(query.get("year"))
-    year_to = _optional_int(query.get("yearTo")) or _optional_int(query.get("year"))
-
-    # Multi-value params — frontend sends comma-separated strings.
-    genres = _split_param(query.get("genre"))
-    statuses = _split_param(query.get("status"))
-    types = _split_param(query.get("type"))
-    seasons = _split_param(query.get("season"))
-
-    filtered = [
-        item
-        for item in anime
-        if _matches(
-            item, search, genres, statuses, year_from, year_to, seasons, types, strict
-        )
-    ]
-
-    # novelty / startDate must not include announced titles
-    if sort in ("novelty", "startDate"):
-        filtered = [item for item in filtered if item.get("status") != "announced"]
-
-    reverse = order != "asc" and sort != "title"
-    key = (
-        (lambda item: item.get("title_en", ""))
-        if sort == "title"
-        else SORTERS.get(sort, SORTERS["popularity"])
-    )
-    sorted_items = sorted(filtered, key=key, reverse=reverse)  # type: ignore[arg-type]
-    start = (page - 1) * limit
-    return {
-        "data": sorted_items[start : start + limit],
-        "total": len(filtered),
-        "page": page,
-    }
-
-
-def _matches(
-    item: Anime,
-    search: str,
-    genres: list[str],
-    statuses: list[str],
-    year_from: int | None,
-    year_to: int | None,
-    seasons: list[str],
-    types: list[str],
-    strict: bool,
-) -> bool:
-    titles = [
-        str(item.get("title_en", "")),
-        str(item.get("title_ru", "")),
-        str(item.get("title_jp", "")),
-    ]
-    item_genres = [g.lower() for g in item.get("genres", [])]
-    item_year = int(item.get("year") or 0)
-
-    if not genres:
-        genre_ok = True
-    elif strict:
-        genre_ok = all(g.lower() in item_genres for g in genres)  # AND — all must match
-    else:
-        genre_ok = any(g.lower() in item_genres for g in genres)  # OR  — any is enough
-
-    return (
-        (not search or any(search in t.lower() for t in titles))
-        and genre_ok
-        and (not statuses or item.get("status") in statuses)
-        and (not year_from or item_year >= year_from)
-        and (not year_to or item_year <= year_to)
-        and (not seasons or item.get("season") in seasons)
-        and (not types or item.get("type") in types)
-    )
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-
-def _split_param(value: str | None) -> list[str]:
-    """Split a comma-separated query param; return [] when absent."""
-    if not value:
-        return []
-    return [v.strip() for v in value.split(",") if v.strip()]
-
-
-def _positive_int(value: str | None, fallback: int) -> int:
-    parsed = _optional_int(value)
-    return parsed if parsed and parsed > 0 else fallback
-
-
-def _optional_int(value: str | None) -> int | None:
-    try:
-        return int(value or "")
-    except ValueError:
-        return None
+        return local  # Shikimori down — local row beats nothing

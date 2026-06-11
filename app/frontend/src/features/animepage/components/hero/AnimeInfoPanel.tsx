@@ -1,5 +1,4 @@
 import type { AnimeInfoLink, AnimeInfoRow } from '@/types/animePage'
-import { CircleHelp } from 'lucide-react'
 import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -41,13 +40,6 @@ export function AnimeInfoPanel({ rows }: AnimeInfoPanelProps) {
 				>
 					<dt className='flex items-center gap-1.5 text-aw-subtle'>
 						{row.label}
-						{row.label === 'Следующий эпизод' && (
-							<CircleHelp
-								size={13}
-								className='text-aw-subtle'
-								aria-hidden='true'
-							/>
-						)}
 					</dt>
 					<dd
 						className={`m-0 leading-relaxed ${
