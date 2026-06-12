@@ -3,11 +3,12 @@ import { WatchlistCard } from '@/features/profile/components/watchlist/Watchlist
 import { WatchlistFilters } from '@/features/profile/components/watchlist/WatchlistFilters'
 import { WatchlistTabs } from '@/features/profile/components/watchlist/WatchlistTabs'
 import type { WatchlistEntry, WatchlistStatus } from '@/types/anime'
+import type { WatchlistFilterState } from '@/types/watchlist'
 import {
 	filterWatchlistEntries,
 	sortWatchlistEntries,
-	WATCHLIST_LABELS,
 } from '@/utils/watchlist'
+import { WATCHLIST_LABELS } from '@/utils/watchlistData'
 import { useEffect, useMemo, useState } from 'react'
 
 type ProfileWatchlistProps = {
@@ -19,13 +20,24 @@ type State =
 	| { status: 'loading' }
 	| { status: 'ready'; entries: WatchlistEntry[] }
 
+const CURRENT_YEAR = new Date().getFullYear()
+
+function defaultFilters(): WatchlistFilterState {
+	return {
+		query: '',
+		genres: new Set(),
+		isStrictMatch: false,
+		groups: new Set(),
+		fromYear: 1959,
+		toYear: CURRENT_YEAR,
+		sort: 'date-desc',
+	}
+}
+
 export function ProfileWatchlist({ userId, isOwn }: ProfileWatchlistProps) {
 	const [active, setActive] = useState<WatchlistStatus>('watching')
 	const [state, setState] = useState<State>({ status: 'loading' })
-	const [query, setQuery] = useState('')
-	const [genre, setGenre] = useState('')
-	const [type, setType] = useState('')
-	const [sort, setSort] = useState('date-desc')
+	const [filters, setFilters] = useState<WatchlistFilterState>(defaultFilters)
 
 	useEffect(() => {
 		let cancelled = false
@@ -47,10 +59,10 @@ export function ProfileWatchlist({ userId, isOwn }: ProfileWatchlistProps) {
 	const visible = useMemo(
 		() =>
 			sortWatchlistEntries(
-				filterWatchlistEntries(activeEntries, query, genre, type),
-				sort,
+				filterWatchlistEntries(activeEntries, filters),
+				filters.sort,
 			),
-		[activeEntries, genre, query, sort, type],
+		[activeEntries, filters],
 	)
 
 	return (
@@ -70,21 +82,13 @@ export function ProfileWatchlist({ userId, isOwn }: ProfileWatchlistProps) {
 				entries={entries}
 				onChange={next => {
 					setActive(next)
-					setGenre('')
-					setType('')
+					setFilters(defaultFilters())
 				}}
 			/>
 			<div className='mt-4'>
 				<WatchlistFilters
-					entries={activeEntries}
-					query={query}
-					genre={genre}
-					type={type}
-					sort={sort}
-					onQuery={setQuery}
-					onGenre={setGenre}
-					onType={setType}
-					onSort={setSort}
+					filters={filters}
+					onChange={setFilters}
 				/>
 			</div>
 			<div className='mt-5 grid gap-3'>

@@ -1,28 +1,6 @@
-import type { Anime, WatchlistEntry, WatchlistStatus } from '@/types/anime'
-
-export const WATCHLIST_STATUSES: WatchlistStatus[] = [
-	'watching',
-	'plan_to_watch',
-	'completed',
-	'on_hold',
-	'dropped',
-]
-
-export const WATCHLIST_LABELS: Record<WatchlistStatus, string> = {
-	watching: 'Смотрю',
-	plan_to_watch: 'В планах',
-	completed: 'Просмотрено',
-	on_hold: 'Отложено',
-	dropped: 'Брошено',
-}
-
-export const WATCHLIST_TYPE_LABELS: Record<string, string> = {
-	tv: 'TV',
-	movie: 'Фильм',
-	ova: 'OVA',
-	ona: 'ONA',
-	special: 'Спешл',
-}
+import type { Anime, WatchlistEntry } from '@/types/anime'
+import type { WatchlistFilterState, WatchlistSort } from '@/types/watchlist'
+import { TYPE_BY_LABEL } from '@/utils/watchlistData'
 
 export function getWatchlistTitle(anime: Anime): string {
 	return anime.title_ru || anime.title_en || 'Неизвестно'
@@ -30,44 +8,55 @@ export function getWatchlistTitle(anime: Anime): string {
 
 export function filterWatchlistEntries(
 	entries: WatchlistEntry[],
-	query: string,
-	genre: string,
-	type: string,
+	filters: WatchlistFilterState,
 ): WatchlistEntry[] {
-	const q = query.trim().toLowerCase()
+	const q = filters.query.trim().toLowerCase()
 	return entries.filter(entry => {
 		const anime = entry.anime
 		const title = anime
 			? `${anime.title_ru} ${anime.title_en}`.toLowerCase()
 			: 'неизвестно'
 		if (q && !title.includes(q)) return false
-		if (genre && !anime?.genres.includes(genre)) return false
-		if (type && anime?.type !== type) return false
+		if (!anime) return !hasStructuredFilters(filters)
+		if (anime.year < filters.fromYear || anime.year > filters.toYear) return false
+		if (!matchesGenres(anime, filters)) return false
+		if (!matchesType(anime, filters)) return false
 		return true
 	})
 }
 
 export function sortWatchlistEntries(
 	entries: WatchlistEntry[],
-	sort: string,
+	sort: WatchlistSort,
 ): WatchlistEntry[] {
 	return [...entries].sort((a, b) => {
-		if (sort === 'title-desc') return titleCompare(b, a)
-		if (sort === 'rating-desc') return ratingCompare(b, a)
-		if (sort === 'rating-asc') return ratingCompare(a, b)
 		if (sort === 'date-asc') return dateCompare(a, b)
 		return dateCompare(b, a)
 	})
 }
 
-function titleCompare(a: WatchlistEntry, b: WatchlistEntry): number {
-	const aTitle = a.anime ? getWatchlistTitle(a.anime) : 'Неизвестно'
-	const bTitle = b.anime ? getWatchlistTitle(b.anime) : 'Неизвестно'
-	return aTitle.localeCompare(bTitle, 'ru')
+function matchesGenres(anime: Anime, filters: WatchlistFilterState): boolean {
+	if (filters.genres.size === 0) return true
+	if (filters.isStrictMatch) {
+		return [...filters.genres].every(genre => anime.genres.includes(genre))
+	}
+	return anime.genres.some(genre => filters.genres.has(genre))
 }
 
-function ratingCompare(a: WatchlistEntry, b: WatchlistEntry): number {
-	return (a.anime?.rating ?? 0) - (b.anime?.rating ?? 0)
+function matchesType(anime: Anime, filters: WatchlistFilterState): boolean {
+	const selected = valuesForGroup(filters.groups, 'Тип')
+	if (selected.length === 0) return true
+	return selected.some(label => TYPE_BY_LABEL[label] === anime.type)
+}
+
+function valuesForGroup(groups: Set<string>, group: string): string[] {
+	return [...groups]
+		.filter(value => value.startsWith(`${group}:`))
+		.map(value => value.slice(group.length + 1))
+}
+
+function hasStructuredFilters(filters: WatchlistFilterState): boolean {
+	return filters.genres.size > 0 || filters.groups.size > 0
 }
 
 function dateCompare(a: WatchlistEntry, b: WatchlistEntry): number {

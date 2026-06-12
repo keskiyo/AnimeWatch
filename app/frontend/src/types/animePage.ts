@@ -19,6 +19,8 @@ export type AnimeFrame = {
 	imageUrl?: string
 }
 
+export type PlayerProviderId = 'kodik' | 'animego'
+
 export type AnimePlayerTrack = {
 	id: string
 	label: string
@@ -27,7 +29,16 @@ export type AnimePlayerTrack = {
 	/** Kodik player link for this specific translation. */
 	link?: string
 	episodesCount?: number
+	provider?: PlayerProviderId
+	/** AnimeGO only: stream player type + ref for the stream endpoint. */
+	playerType?: 'aniboom' | 'cvh'
+	streamRef?: string
 }
+
+export type StreamSource =
+	| { kind: 'hls'; url: string }
+	| { kind: 'mp4'; urls: string[] }
+	| { kind: 'unsupported' }
 
 export type AnimePlayerEpisode = {
 	number: number
@@ -43,9 +54,27 @@ export type AnimeScheduleRow = {
 }
 
 export type PlayerProvider = {
-	id: string
+	id: PlayerProviderId
 	label: string
+	kind: 'iframe' | 'stream'
+	available: boolean
 }
+
+export type AnimegoVoice = {
+	id: string
+	title: string
+	player_type: 'aniboom' | 'cvh'
+	stream_ref: string
+}
+
+export type AnimegoVoices =
+	| {
+			available: true
+			provider: 'animego'
+			episodes_count: number
+			voices: AnimegoVoice[]
+	  }
+	| { available: false; provider: 'animego'; message: string }
 
 export type AnimePlayerProps = {
 	title: string

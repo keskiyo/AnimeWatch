@@ -1,6 +1,9 @@
+import {
+	useEpisodePages,
+	VISIBLE_EPISODES,
+} from '@/features/animepage/hooks/useEpisodePages'
 import type { AnimePlayerEpisode } from '@/types/animePage'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
 
 type AnimePlayerEpisodesProps = {
 	episodes: AnimePlayerEpisode[]
@@ -9,73 +12,21 @@ type AnimePlayerEpisodesProps = {
 	onEpisodeChange?: (episodeNumber: number) => void
 }
 
-const VISIBLE_EPISODES = 8
-
 export function AnimePlayerEpisodes({
 	episodes,
 	activeEpisode,
 	availableEpisodesCount,
 	onEpisodeChange,
 }: AnimePlayerEpisodesProps) {
-	const displayEpisodes = useMemo(() => {
-		if (availableEpisodesCount == null) {
-			return episodes
-		}
-
-		if (availableEpisodesCount <= 0) {
-			return []
-		}
-
-		return episodes.slice(0, availableEpisodesCount)
-	}, [episodes, availableEpisodesCount])
-
-	const activeIndex = displayEpisodes.findIndex(ep =>
-		activeEpisode !== undefined ? ep.number === activeEpisode : ep.isActive,
-	)
-
-	const normalizedActiveIndex = activeIndex >= 0 ? activeIndex : 0
-
-	const pages = useMemo(() => {
-		const result: AnimePlayerEpisode[][] = []
-
-		for (let i = 0; i < displayEpisodes.length; i += VISIBLE_EPISODES) {
-			result.push(displayEpisodes.slice(i, i + VISIBLE_EPISODES))
-		}
-
-		return result
-	}, [displayEpisodes])
-
-	const [page, setPage] = useState(0)
-
-	useEffect(() => {
-		if (displayEpisodes.length === 0) {
-			setPage(0)
-			return
-		}
-
-		const activePage = Math.floor(normalizedActiveIndex / VISIBLE_EPISODES)
-
-		setPage(prevPage => {
-			const activeIsVisible =
-				normalizedActiveIndex >= prevPage * VISIBLE_EPISODES &&
-				normalizedActiveIndex < (prevPage + 1) * VISIBLE_EPISODES
-
-			if (activeIsVisible) return prevPage
-
-			return activePage
-		})
-	}, [normalizedActiveIndex, displayEpisodes.length])
-
-	const isPrevDisabled = page <= 0
-	const isNextDisabled = page >= pages.length - 1
-
-	const handlePrev = () => {
-		setPage(prev => Math.max(0, prev - 1))
-	}
-
-	const handleNext = () => {
-		setPage(prev => Math.min(pages.length - 1, prev + 1))
-	}
+	const {
+		displayEpisodes,
+		pages,
+		page,
+		isPrevDisabled,
+		isNextDisabled,
+		handlePrev,
+		handleNext,
+	} = useEpisodePages({ episodes, activeEpisode, availableEpisodesCount })
 
 	if (displayEpisodes.length === 0) {
 		return (

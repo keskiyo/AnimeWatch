@@ -1,6 +1,6 @@
 import { PosterImage } from '@/components/anime/PosterImage'
 import type { Anime } from '@/types/anime'
-import { formatAnimeType } from '@/utils/animePageFormatters'
+import { formatAnimeType } from '@/utils/animePageLabels'
 import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
 import { Link } from 'react-router-dom'

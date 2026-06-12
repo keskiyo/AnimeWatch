@@ -1,10 +1,10 @@
 import { getWatchlist, toggleWatchlistStatus } from '@/api/watchlistApi'
 import { useAuthUser } from '@/features/auth/useAuthUser'
 import type { WatchlistStatus } from '@/types/anime'
-import { WATCHLIST_LABELS, WATCHLIST_STATUSES } from '@/utils/watchlist'
+import { notifyError, notifySuccess } from '@/utils/notify'
+import { WATCHLIST_LABELS, WATCHLIST_STATUSES } from '@/utils/watchlistData'
 import { Cloud, Clock, Eye, EyeOff, Flag } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { toast } from 'react-toastify'
 
 type WatchlistActionsProps = {
 	animeId: number
@@ -48,7 +48,7 @@ export function WatchlistActions({ animeId }: WatchlistActionsProps) {
 
 	async function onToggle(status: WatchlistStatus) {
 		if (!user) {
-			toast.error('Вы не авторизованы')
+			notifyError('Войдите, чтобы добавить аниме в список')
 			return
 		}
 
@@ -56,8 +56,13 @@ export function WatchlistActions({ animeId }: WatchlistActionsProps) {
 		try {
 			const result = await toggleWatchlistStatus(animeId, status)
 			setActive(new Set(result.statuses))
+			notifySuccess(
+				result.active
+					? `Добавлено: ${WATCHLIST_LABELS[status]}`
+					: `Убрано: ${WATCHLIST_LABELS[status]}`,
+			)
 		} catch {
-			toast.error('Не удалось обновить список')
+			notifyError('Не удалось обновить список')
 		} finally {
 			setPending(null)
 		}

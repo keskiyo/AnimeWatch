@@ -5,7 +5,7 @@ import {
 	SubmitButton,
 } from '@/features/header/components/auth/AuthFormControls'
 import { validatePassword } from '@/utils/authValidation'
-import { notifySuccess } from '@/utils/notify'
+import { notifyError, notifySuccess } from '@/utils/notify'
 import { isAxiosError } from 'axios'
 import { useState, type SyntheticEvent } from 'react'
 
@@ -38,11 +38,12 @@ export function ChangePasswordForm() {
 			setOldPassword('')
 			setNewPassword('')
 		} catch (err) {
-			if (isAxiosError(err) && err.response?.status === 401) {
-				setError('Текущий пароль неверен')
-			} else {
-				setError('Не удалось сменить пароль. Попробуйте позже.')
-			}
+			const message =
+				isAxiosError(err) && err.response?.status === 401
+					? 'Текущий пароль неверен'
+					: 'Не удалось сменить пароль. Попробуйте позже.'
+			setError(message)
+			notifyError(message)
 		} finally {
 			setIsSubmitting(false)
 		}

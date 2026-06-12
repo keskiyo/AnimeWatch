@@ -1,10 +1,13 @@
 import { AnimePlayerEpisodes } from '@/features/animepage/components/player/AnimePlayerEpisodes'
 import { AnimePlayerFrame } from '@/features/animepage/components/player/AnimePlayerFrame'
+import { AnimePlayerMobileControls } from '@/features/animepage/components/player/AnimePlayerMobileControls'
+import { AnimePlayerOptionsDrawer } from '@/features/animepage/components/player/AnimePlayerOptionsDrawer'
 import { AnimePlayerSidebar } from '@/features/animepage/components/player/AnimePlayerSidebar'
 import { useAnimePlayerState } from '@/features/animepage/hooks/useAnimePlayerState'
 import { useFormattedDate } from '@/features/catalog/hooks/useFormattedDate'
 import type { AnimePlayerProps } from '@/types/animePage'
-import { formatPlayerAgeRating } from '@/utils/animePageFormatters'
+import { formatPlayerAgeRating } from '@/utils/animePageLabels'
+import { useMemo, useState } from 'react'
 
 export function AnimePlayer({
 	title,
@@ -23,7 +26,7 @@ export function AnimePlayer({
 }: AnimePlayerProps) {
 	const formattedDate = useFormattedDate({ activeEpisodeDate })
 	const displayRating = formatPlayerAgeRating(ageRating)
-
+	const [isOptionsOpen, setIsOptionsOpen] = useState(false)
 	const {
 		availableEpisodesCount,
 		activeEpisode,
@@ -40,23 +43,46 @@ export function AnimePlayer({
 		activeEpisodeTitle,
 		onTrackChange,
 	})
+	const activeTrack = visibleTracks.find(track => track.id === activeTrackId)
+	const activeProvider = effectiveProviders.find(
+		provider => provider.id === activeProviderId,
+	)
+	const normalizedActiveEpisode = activeEpisode ?? episodes[0]?.number ?? 1
+	const sidebarProps = useMemo(
+		() => ({
+			tracks: visibleTracks,
+			providers: effectiveProviders,
+			hasEpisodes: availableEpisodesCount > 0,
+			activeTrackId,
+			activeProviderId,
+			onTrackChange,
+			onProviderChange,
+		}),
+		[
+			activeProviderId,
+			activeTrackId,
+			availableEpisodesCount,
+			effectiveProviders,
+			onProviderChange,
+			onTrackChange,
+			visibleTracks,
+		],
+	)
 
 	return (
-		// id + scroll-mt: the «Смотреть онлайн» button scrolls here (header is sticky)
 		<section id='watch-player' className='scroll-mt-20'>
-			<div className='mb-3 flex items-center justify-between gap-4'>
-				<h2 className='m-0 text-2xl font-normal leading-tight text-aw-text'>
+			<div className='mb-3 flex items-start justify-between gap-3'>
+				<h2 className='m-0 text-2xl font-normal leading-tight text-aw-text max-[760px]:text-[22px]'>
 					{title}
 				</h2>
 				{displayRating && (
-					<span className='text-2xl font-bold text-aw-subtle'>
+					<span className='shrink-0 text-2xl font-bold text-aw-subtle max-[760px]:text-xl'>
 						{displayRating}
 					</span>
 				)}
 			</div>
 
 			<div className='grid grid-cols-[minmax(0,1fr)_260px] gap-4 max-[900px]:grid-cols-1'>
-				{/* Left: player + episodes + meta */}
 				<div>
 					<AnimePlayerFrame
 						title={title}
@@ -66,12 +92,25 @@ export function AnimePlayer({
 						availableEpisodesCount={availableEpisodesCount}
 						nextEpisodeDate={formattedDate}
 					/>
-					<AnimePlayerEpisodes
-						episodes={episodes}
-						activeEpisode={activeEpisode}
-						availableEpisodesCount={availableEpisodesCount}
-						onEpisodeChange={setActiveEpisode}
-					/>
+					<div className='max-[760px]:hidden'>
+						<AnimePlayerEpisodes
+							episodes={episodes}
+							activeEpisode={activeEpisode}
+							availableEpisodesCount={availableEpisodesCount}
+							onEpisodeChange={setActiveEpisode}
+						/>
+					</div>
+					<div className='min-[761px]:hidden'>
+						<AnimePlayerMobileControls
+							episodes={episodes}
+							activeEpisode={normalizedActiveEpisode}
+							availableEpisodesCount={availableEpisodesCount}
+							activeTrackLabel={activeTrack?.label}
+							activeProviderLabel={activeProvider?.label}
+							onEpisodeChange={setActiveEpisode}
+							onOpenOptions={() => setIsOptionsOpen(true)}
+						/>
+					</div>
 					<div className='mt-4 grid gap-3 text-sm text-aw-text'>
 						{availableEpisodesCount > 0 && (
 							<p className='m-0 text-aw-subtle'>
@@ -89,15 +128,13 @@ export function AnimePlayer({
 					</div>
 				</div>
 
-				{/* Right: "Озвучка" / "Плеер" tabs */}
-				<AnimePlayerSidebar
-					tracks={visibleTracks}
-					providers={effectiveProviders}
-					hasEpisodes={availableEpisodesCount > 0}
-					activeTrackId={activeTrackId}
-					activeProviderId={activeProviderId}
-					onTrackChange={onTrackChange}
-					onProviderChange={onProviderChange}
+				<div className='max-[760px]:hidden'>
+					<AnimePlayerSidebar {...sidebarProps} />
+				</div>
+				<AnimePlayerOptionsDrawer
+					isOpen={isOptionsOpen}
+					onClose={() => setIsOptionsOpen(false)}
+					{...sidebarProps}
 				/>
 			</div>
 		</section>

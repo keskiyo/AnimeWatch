@@ -1,101 +1,75 @@
-import type { AnimeType, WatchlistEntry } from '@/types/anime'
-import { WATCHLIST_TYPE_LABELS } from '@/utils/watchlist'
-import { Search } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { useMemo } from 'react'
+import type {
+	WatchlistFilterState,
+	WatchlistFiltersProps,
+} from '@/types/watchlist'
+import { filterGroups } from '@/utils/catalogData'
+import { X } from 'lucide-react'
+import { WatchlistGenreFilter } from './WatchlistGenreFilter'
+import { WatchlistSortFilter } from './WatchlistSortFilter'
+import { WatchlistTypeFilter } from './WatchlistTypeFilter'
 
-type WatchlistFiltersProps = {
-	entries: WatchlistEntry[]
-	query: string
-	genre: string
-	type: string
-	sort: string
-	onQuery: (value: string) => void
-	onGenre: (value: string) => void
-	onType: (value: string) => void
-	onSort: (value: string) => void
-}
+export function WatchlistFilters({ filters, onChange }: WatchlistFiltersProps) {
+	const typeGroup = filterGroups.find(group => group.title === 'Тип')
 
-export function WatchlistFilters(props: WatchlistFiltersProps) {
-	const genres = useMemo(
-		() =>
-			[
-				...new Set(
-					props.entries.flatMap(entry => entry.anime?.genres ?? []),
-				),
-			].sort((a, b) => a.localeCompare(b, 'ru')),
-		[props.entries],
-	)
-	const types = useMemo(
-		() => [
-			...new Set(
-				props.entries
-					.map(entry => entry.anime?.type)
-					.filter((type): type is AnimeType => Boolean(type)),
-			),
-		],
-		[props.entries],
-	)
+	function patch(next: Partial<WatchlistFilterState>) {
+		onChange({ ...filters, ...next })
+	}
+
+	function toggleSet(key: 'genres' | 'groups', value: string) {
+		const next = new Set(filters[key])
+		if (next.has(value)) next.delete(value)
+		else next.add(value)
+		patch({ [key]: next } as Partial<WatchlistFilterState>)
+	}
+
+	function clearGroup(title: string) {
+		const next = new Set(
+			[...filters.groups].filter(value => !value.startsWith(`${title}:`)),
+		)
+		patch({ groups: next })
+	}
 
 	return (
-		<div className='grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_160px_180px]'>
-			<label className='relative block'>
-				<Search
-					size={17}
-					className='absolute left-3 top-1/2 -translate-y-1/2 text-aw-subtle'
-					aria-hidden='true'
-				/>
+		<div className='flex flex-nowrap items-start gap-2 pb-1'>
+			<div className='relative min-w-52 flex-1'>
 				<input
-					value={props.query}
-					onChange={event => props.onQuery(event.target.value)}
-					placeholder='Поиск по названию'
-					className='h-10 w-full rounded-md border border-aw-border bg-aw-elevated pl-9 pr-3 text-sm text-aw-text'
+					value={filters.query}
+					onChange={event => patch({ query: event.target.value })}
+					placeholder='Поиск'
+					className='h-9 w-full rounded-md border border-aw-border bg-aw-elevated px-3 pr-9 text-sm text-aw-text outline-none transition placeholder:text-aw-subtle focus:border-aw-accent'
 				/>
-			</label>
-			<Select value={props.genre} onChange={props.onGenre}>
-				<option value=''>Все жанры</option>
-				{genres.map(genre => (
-					<option key={genre} value={genre}>
-						{genre}
-					</option>
-				))}
-			</Select>
-			<Select value={props.type} onChange={props.onType}>
-				<option value=''>Все типы</option>
-				{types.map(type => (
-					<option key={type} value={type}>
-						{WATCHLIST_TYPE_LABELS[type] || type}
-					</option>
-				))}
-			</Select>
-			<Select value={props.sort} onChange={props.onSort}>
-				<option value='date-desc'>Сначала новые</option>
-				<option value='date-asc'>Сначала старые</option>
-				<option value='title-asc'>Название А-Я</option>
-				<option value='title-desc'>Название Я-А</option>
-				<option value='rating-desc'>Рейтинг выше</option>
-				<option value='rating-asc'>Рейтинг ниже</option>
-			</Select>
+				{filters.query && (
+					<button
+						type='button'
+						onClick={() => patch({ query: '' })}
+						aria-label='Очистить поиск'
+						className='absolute right-2 top-1/2 inline-flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-aw-subtle transition hover:text-aw-accent'
+					>
+						<X size={15} aria-hidden='true' />
+					</button>
+				)}
+			</div>
+			{typeGroup && (
+				<WatchlistTypeFilter
+					group={typeGroup}
+					selected={filters.groups}
+					onToggle={value => toggleSet('groups', value)}
+					onClear={() => clearGroup(typeGroup.title || '')}
+				/>
+			)}
+			<WatchlistGenreFilter
+				genres={filters.genres}
+				isStrictMatch={filters.isStrictMatch}
+				onToggleGenre={genre => toggleSet('genres', genre)}
+				onStrictChange={() =>
+					patch({ isStrictMatch: !filters.isStrictMatch })
+				}
+				onClear={() => patch({ genres: new Set() })}
+			/>
+			<WatchlistSortFilter
+				value={filters.sort}
+				onChange={sort => patch({ sort })}
+			/>
 		</div>
-	)
-}
-
-function Select({
-	value,
-	children,
-	onChange,
-}: {
-	value: string
-	children: ReactNode
-	onChange: (value: string) => void
-}) {
-	return (
-		<select
-			value={value}
-			onChange={event => onChange(event.target.value)}
-			className='h-10 cursor-pointer rounded-md border border-aw-border bg-aw-elevated px-3 text-sm text-aw-text'
-		>
-			{children}
-		</select>
 	)
 }

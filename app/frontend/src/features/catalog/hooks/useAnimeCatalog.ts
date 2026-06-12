@@ -33,6 +33,7 @@ export function useAnimeCatalog(
 		total: cacheTotal,
 		isComplete,
 		isLoading,
+		error,
 	} = useAnimeCache()
 
 	const pageSize = useMemo(
@@ -81,6 +82,7 @@ export function useAnimeCatalog(
 
 	return {
 		anime: displayed,
+		error,
 		isInitialLoading: allAnime.length === 0 && isLoading,
 		isLoadingMore: false,
 		hasMore,

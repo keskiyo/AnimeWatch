@@ -11,15 +11,6 @@ import {
 import { setPageMeta } from '@/utils/pageMeta'
 import { useEffect, useState } from 'react'
 
-type ScheduleItem = {
-	anime: Anime
-	episode: number
-	time: string
-	studio?: string
-}
-
-type ScheduleResponse = Record<string, ScheduleItem[]>
-
 export function HomePage() {
 	const [anime, setAnime] = useState<Anime[]>([])
 	const [isLoading, setIsLoading] = useState(true)
@@ -39,8 +30,6 @@ export function HomePage() {
 				setIsLoading(true)
 
 				const result = await getHomeSeasonAnime(15)
-
-				console.log('HOME anime:', result.slice(0, 5))
 
 				if (!isCancelled) {
 					setAnime(result)

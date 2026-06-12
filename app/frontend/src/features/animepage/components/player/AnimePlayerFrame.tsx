@@ -31,7 +31,7 @@ export function AnimePlayerFrame({
 
 	return (
 		<div
-			className='relative flex aspect-video min-h-75 items-center justify-center overflow-hidden rounded-sm bg-aw-elevated'
+			className='relative flex aspect-video min-h-75 items-center justify-center overflow-hidden rounded-sm bg-aw-elevated max-[760px]:min-h-0'
 			style={{ background }}
 		>
 			{canRenderPlayer ? (

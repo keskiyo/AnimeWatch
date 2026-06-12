@@ -7,3 +7,4 @@ anime-parsers-ru==1.16.2
 python-dotenv==1.0.1
 python-multipart==0.0.32
 Pillow==12.1.1
+aiohttp==3.14.1

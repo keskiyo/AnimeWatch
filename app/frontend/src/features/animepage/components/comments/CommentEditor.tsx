@@ -2,6 +2,7 @@ import { postAnimeComment } from '@/api/commentsApi'
 import { openAuthModal } from '@/features/auth/authModalBus'
 import { useAuthUser } from '@/features/auth/useAuthUser'
 import type { AnimeComment } from '@/types/reviews'
+import { notifyError, notifySuccess } from '@/utils/notify'
 import { Bold, Italic, SendHorizontal, Strikethrough, Underline } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent } from 'react'
 
@@ -47,8 +48,12 @@ export function CommentEditor({ animeId, onPosted }: CommentEditorProps) {
 			const comment = await postAnimeComment(animeId, trimmed)
 			setText('')
 			onPosted(comment)
+			notifySuccess('Комментарий опубликован')
 		} catch {
-			setError('Не удалось отправить комментарий. Попробуйте позже.')
+			const message =
+				'Не удалось отправить комментарий. Попробуйте позже.'
+			setError(message)
+			notifyError(message)
 		} finally {
 			setIsSubmitting(false)
 		}

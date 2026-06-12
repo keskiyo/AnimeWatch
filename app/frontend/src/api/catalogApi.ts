@@ -37,13 +37,8 @@ export async function getCatalog(
 }
 
 export async function getBulkCatalog(): Promise<CatalogResult> {
-	return withFallback(
-		async () => {
-			const response = await apiClient.get<CatalogResult>('/anime/bulk')
-			return response.data
-		},
-		{ data: [], total: 0, page: 1 },
-	)
+	const response = await apiClient.get<CatalogResult>('/anime/bulk')
+	return response.data
 }
 
 export async function getStudioAnime(

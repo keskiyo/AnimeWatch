@@ -1,7 +1,10 @@
 import { PosterImage } from '@/components/anime/PosterImage'
-import type { CatalogAnimeCardProps, CatalogViewMode } from '@/types/catalog'
+import type { Anime } from '@/types/anime'
+import type { CatalogViewMode } from '@/types/catalog'
 import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
 import { createAnimeSlug } from '@/utils/animeSlug'
+import { formatAnimeReleaseYear } from '@/utils/animeYear'
+import { formatCatalogAnimeType } from '@/utils/catalogFormatters'
 import { Link } from 'react-router-dom'
 
 const CARD_CLASSES: Record<CatalogViewMode, string> = {
@@ -17,10 +20,15 @@ const POSTER_CLASSES: Record<CatalogViewMode, string> = {
 	list: 'h-[205px]',
 }
 
+type AnimeCardProps = {
+	anime: Anime
+	variant?: CatalogViewMode
+}
+
 export function AnimeCard({
 	anime,
 	variant = 'poster',
-}: CatalogAnimeCardProps) {
+}: AnimeCardProps) {
 	const isHorizontal = variant !== 'poster'
 	const title = anime.title_ru || anime.title_en
 	const slug = createAnimeSlug(anime.id, anime.title_en || title)
@@ -69,9 +77,9 @@ export function AnimeCard({
 				<div
 					className={`flex items-center gap-2 ${variant === 'list' ? '' : 'whitespace-nowrap'}`}
 				>
-					{formatAnimeType(anime.type)}
+					{formatCatalogAnimeType(anime.type)}
 					<span>/</span>
-					{anime.year}
+					{formatAnimeReleaseYear(anime)}
 				</div>
 				{isHorizontal && (
 					<div
@@ -88,17 +96,5 @@ export function AnimeCard({
 			)}
 		</Link>
 	)
-}
-
-function formatAnimeType(value: string): string {
-	const labels: Record<string, string> = {
-		tv: 'Сериал',
-		movie: 'Фильм',
-		ova: 'OVA',
-		ona: 'ONA',
-		special: 'Спешл',
-	}
-
-	return labels[value] ?? value
 }
 

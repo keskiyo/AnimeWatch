@@ -237,7 +237,7 @@ async def _fetch_and_save(ids: list[int], env: Settings) -> int:
 
 
 async def maybe_start_daily_recent_sync(settings: Settings | None = None) -> None:
-    """If the last recent sync is older than 7 days (or missing), run one in
+    """If the last recent sync is older than 24 hours (or missing), run one in
     the background. Never blocks startup, never starts a second sync."""
     env = settings or get_settings()
     ensure_sync_state_schema(env.database_path)

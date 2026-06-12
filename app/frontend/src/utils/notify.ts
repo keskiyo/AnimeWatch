@@ -1,7 +1,6 @@
 import { toast } from 'react-toastify'
 
-// Thin wrapper — position/theme/autoClose come from the ToastContainer in
-// App.tsx; this keeps a single import point if we ever swap the library.
+// ToastContainer owns position/theme/autoClose; app code imports only this file.
 
 export function notifySuccess(message: string) {
 	toast.success(message)

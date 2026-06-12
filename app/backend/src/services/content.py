@@ -1,7 +1,5 @@
 import asyncio
-from datetime import UTC, datetime, timedelta
 
-from src.config import get_settings
 from src.logger import get_logger
 from src.services.catalog import get_anime_by_id
 from src.services.kodik import (
@@ -9,13 +7,12 @@ from src.services.kodik import (
     get_kodik_search_results,
     normalize_kodik_player_result,
 )
-from src.services.shikimori import fetch_shikimori_ongoing
 
 log = get_logger(__name__)
 
 
 async def get_episodes_for_anime(anime_id: int) -> list[dict]:
-    """Build the episode list from real data: Kodik (links, titles, dubbing) + Shikimori (aired count, next episode)."""
+    """Build episodes from local catalog counts plus cached/live Kodik player data."""
     if anime_id <= 0:
         return []
 
@@ -71,7 +68,7 @@ async def get_episodes_for_anime(anime_id: int) -> list[dict]:
         for number in range(1, total + 1)
     ]
 
-    # Upcoming episode with a real air date from Shikimori
+    # Upcoming episode date is read from the local catalog row.
     next_at = (anime or {}).get("next_episode_at")
     if anime and anime.get("status") == "ongoing" and next_at:
         upcoming_number = episodes_aired + 1
@@ -94,44 +91,6 @@ async def get_episodes_for_anime(anime_id: int) -> list[dict]:
 
     return episodes
 
-
-async def get_schedule(days: int, studio: str | None = None) -> dict[str, list[dict]]:
-    """Release schedule built from Shikimori ongoing anime (nextEpisodeAt), grouped by date."""
-    limit_days = min(max(days, 1), 30)
-    ongoing = await fetch_shikimori_ongoing(get_settings())
-
-    now = datetime.now(tz=UTC)
-    horizon = now + timedelta(days=limit_days)
-    schedule: dict[str, list[dict]] = {}
-
-    for anime in ongoing:
-        next_at = anime.get("next_episode_at")
-        if not next_at:
-            continue
-        try:
-            air_time = datetime.fromisoformat(str(next_at).replace("Z", "+00:00"))
-        except ValueError:
-            continue
-        # Keep today's already-aired entries; drop anything past the horizon
-        if air_time < now - timedelta(hours=12) or air_time > horizon:
-            continue
-        anime_studio = (anime.get("studio") or "").strip()
-        if studio and anime_studio.lower() != studio.lower():
-            continue
-        date_key = air_time.astimezone(UTC).date().isoformat()
-        schedule.setdefault(date_key, []).append(
-            {
-                "anime": anime,
-                "episode": int(anime.get("episodes_aired") or 0) + 1,
-                "time": air_time.astimezone(UTC).isoformat().replace("+00:00", "Z"),
-                "studio": anime_studio or "Неизвестно",
-            }
-        )
-
-    return {
-        date: sorted(entries, key=lambda entry: entry["time"])
-        for date, entries in sorted(schedule.items())
-    }
 
 
 def get_studios(kodik_configured: bool) -> list[dict]:

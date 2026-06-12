@@ -2,6 +2,7 @@ import { AnimeInfoPanel } from '@/features/animepage/components/hero/AnimeInfoPa
 import { AnimePosterActions } from '@/features/animepage/components/hero/AnimePosterActions'
 import type { AnimePageData } from '@/types/animePage'
 import { Star } from 'lucide-react'
+import { useState } from 'react'
 
 type AnimePageHeroProps = {
 	data: AnimePageData
@@ -10,6 +11,7 @@ type AnimePageHeroProps = {
 export function AnimePageHero({ data }: AnimePageHeroProps) {
 	const rating = data.anime.rating
 	const hasRating = rating > 0
+	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 
 	return (
 		<section className='rounded-lg bg-aw-surface px-4 py-5'>
@@ -44,13 +46,28 @@ export function AnimePageHero({ data }: AnimePageHeroProps) {
 				<AnimePosterActions anime={data.anime} player={data.player} />
 				<AnimeInfoPanel rows={data.infoRows} />
 			</div>
-			<div className='mt-8 grid gap-5 text-base leading-relaxed text-aw-text'>
+			<div
+				className={`mt-8 grid gap-4 overflow-hidden text-base leading-relaxed text-aw-text max-[760px]:mt-5 max-[760px]:text-[15px] max-[760px]:leading-[1.55] ${
+					isDescriptionExpanded
+						? ''
+						: 'max-[760px]:max-h-[15.5rem]'
+				}`}
+			>
 				{data.description.map(paragraph => (
 					<p key={paragraph} className='m-0'>
 						{paragraph}
 					</p>
 				))}
 			</div>
+			{!isDescriptionExpanded && (
+				<button
+					type='button'
+					onClick={() => setIsDescriptionExpanded(true)}
+					className='mt-2 hidden cursor-pointer border-0 bg-transparent p-0 text-sm text-aw-accent hover:text-aw-accent-hover max-[760px]:inline-flex'
+				>
+					Развернуть
+				</button>
+			)}
 		</section>
 	)
 }

@@ -25,6 +25,8 @@ class Settings:
     allow_shikimori_bulk_fallback: bool
     catalog_refresh_token: str | None
     catalog_refresh_timeout_ms: int
+    animego_mirror: str | None
+    animego_proxy: str | None
 
 
 def get_settings() -> Settings:
@@ -67,6 +69,8 @@ def get_settings() -> Settings:
         ),
         catalog_refresh_token=environ.get("CATALOG_REFRESH_TOKEN") or None,
         catalog_refresh_timeout_ms=_read_int("CATALOG_REFRESH_TIMEOUT_MS", 7_200_000),
+        animego_mirror=environ.get("ANIMEGO_MIRROR") or None,
+        animego_proxy=environ.get("ANIMEGO_PROXY") or None,
     )
 
 

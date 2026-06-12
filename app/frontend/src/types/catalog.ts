@@ -1,24 +1,3 @@
-import type { Anime } from './anime'
-
-export type CatalogAnime = {
-	id: number
-	originalTitle: string
-	russianTitle: string
-	type: string
-	year: number
-	genres: string[]
-	description: string
-	rating: number
-	addedAt: string
-	gradient: string
-	posterLabel: string
-}
-
-export type CatalogAnimeCardProps = {
-	anime: Anime
-	variant?: CatalogViewMode
-}
-
 export type CatalogViewMode = 'poster' | 'compact' | 'list'
 
 export type CatalogViewModeOption = {
@@ -39,12 +18,6 @@ export type GenreDropdownProps = {
 	resetKey: number
 	onToggleGenre: (value: string) => void
 	onToggleStrictMatch: () => void
-}
-
-export type CatalogFilterState = {
-	checked: Set<string>
-	checkedGenres: Set<string>
-	isStrictMatch: boolean
 }
 
 export type SortOption = 'дате добавления' | 'новизне' | 'рейтингу'

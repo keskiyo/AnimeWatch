@@ -1,6 +1,7 @@
 import { resolveAvatarUrl } from '@/api/authApi'
 import { CommentActions } from '@/features/animepage/components/comments/CommentActions'
 import { CommentActionsMenu } from '@/features/animepage/components/comments/CommentActionsMenu'
+import { CommentEditForm } from '@/features/animepage/components/comments/CommentEditForm'
 import { FormattedText } from '@/features/animepage/components/comments/FormattedText'
 import { useAuthUser } from '@/features/auth/useAuthUser'
 import type { AnimeComment } from '@/types/reviews'
@@ -43,6 +44,7 @@ export function CommentCard({
 		try {
 			await onEdit(comment.id, text)
 			setIsEditing(false)
+			notifySuccess('Комментарий обновлён')
 		} catch {
 			notifyError('Не удалось сохранить изменения. Попробуйте позже.')
 		} finally {
@@ -105,31 +107,13 @@ export function CommentCard({
 				</div>
 
 				{isEditing ? (
-					<div className='mt-1.5'>
-						<textarea
-							value={draft}
-							onChange={e => setDraft(e.target.value)}
-							maxLength={2000}
-							className='h-24 w-full resize-none rounded-xl border border-aw-border bg-[#3a3a3a] px-3 py-2 text-aw-text outline-none focus:border-aw-accent'
-						/>
-						<div className='mt-1.5 flex gap-2'>
-							<button
-								type='button'
-								onClick={() => void saveEdit()}
-								disabled={isBusy || !draft.trim()}
-								className='cursor-pointer rounded-md bg-aw-accent px-3 py-1.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50'
-							>
-								Сохранить
-							</button>
-							<button
-								type='button'
-								onClick={() => setIsEditing(false)}
-								className='cursor-pointer rounded-md border border-aw-border bg-transparent px-3 py-1.5 text-sm text-aw-subtle transition-colors hover:text-aw-text'
-							>
-								Отмена
-							</button>
-						</div>
-					</div>
+					<CommentEditForm
+						draft={draft}
+						isBusy={isBusy}
+						onDraftChange={setDraft}
+						onCancel={() => setIsEditing(false)}
+						onSave={() => void saveEdit()}
+					/>
 				) : (
 					<>
 						<p className='m-0 whitespace-pre-line wrap-break-word leading-relaxed text-aw-text'>

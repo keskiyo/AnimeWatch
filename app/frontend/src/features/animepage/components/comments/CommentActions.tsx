@@ -2,7 +2,7 @@ import { voteAnimeComment } from '@/api/commentsApi'
 import { openAuthModal } from '@/features/auth/authModalBus'
 import { useAuthUser } from '@/features/auth/useAuthUser'
 import type { AnimeComment } from '@/types/reviews'
-import { notifyError } from '@/utils/notify'
+import { notifyError, notifySuccess } from '@/utils/notify'
 import { ThumbsDown, ThumbsUp } from 'lucide-react'
 import { useState, type KeyboardEvent } from 'react'
 
@@ -55,6 +55,7 @@ export function CommentActions({ comment, onReply }: CommentActionsProps) {
 			await onReply(text)
 			setReplyText('')
 			setIsReplying(false)
+			notifySuccess('Ответ опубликован')
 		} catch {
 			notifyError('Не удалось отправить ответ. Попробуйте позже.')
 		} finally {

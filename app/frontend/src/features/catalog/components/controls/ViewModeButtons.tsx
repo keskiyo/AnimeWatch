@@ -1,6 +1,7 @@
 import type { CatalogViewMode } from '@/types/catalog'
 import { CATALOG_VIEW_MODES } from '@/utils/catalogData'
 import { Grip, LayoutGrid, List } from 'lucide-react'
+import { useEffect } from 'react'
 
 const VIEW_ICONS = {
 	poster: Grip,
@@ -17,6 +18,18 @@ export function ViewModeButtons({
 	viewMode,
 	onChange,
 }: ViewModeButtonsProps) {
+	useEffect(() => {
+		const mediaQuery = window.matchMedia('(max-width: 767px)')
+
+		function syncMobileMode(event: MediaQueryList | MediaQueryListEvent) {
+			if (event.matches && viewMode === 'compact') onChange('poster')
+		}
+
+		syncMobileMode(mediaQuery)
+		mediaQuery.addEventListener('change', syncMobileMode)
+		return () => mediaQuery.removeEventListener('change', syncMobileMode)
+	}, [onChange, viewMode])
+
 	return (
 		<div className='flex items-center gap-3' aria-label='Режим отображения'>
 			{CATALOG_VIEW_MODES.map(mode => {
@@ -28,7 +41,7 @@ export function ViewModeButtons({
 						type='button'
 						className={`inline-flex cursor-pointer border-0 bg-transparent p-0 transition-colors hover:text-aw-accent ${
 							mode.id === viewMode ? 'text-aw-accent' : 'text-aw-icon'
-						}`}
+						} ${mode.id === 'compact' ? 'max-[767px]:hidden' : ''}`}
 						aria-label={mode.label}
 						aria-pressed={mode.id === viewMode}
 						onClick={() => onChange(mode.id)}

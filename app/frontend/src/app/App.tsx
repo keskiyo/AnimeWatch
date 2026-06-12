@@ -57,7 +57,7 @@ export function App() {
 				<Footer />
 				<ToastContainer
 					theme='dark'
-					position='bottom-right'
+					position='top-right'
 					autoClose={2200}
 				/>
 			</div>

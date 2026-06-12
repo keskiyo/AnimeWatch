@@ -11,7 +11,7 @@ import {
 	mapSignupApiError,
 	validateSignup,
 } from '@/utils/authValidation'
-import { notifySuccess } from '@/utils/notify'
+import { notifyError, notifySuccess } from '@/utils/notify'
 import { isAxiosError } from 'axios'
 import { SyntheticEvent, useState } from 'react'
 
@@ -68,16 +68,15 @@ export function SignupForm({ className, onSuccess }: SignupFormProps) {
 			notifySuccess(`Аккаунт создан — добро пожаловать, ${user.name}!`)
 			onSuccess()
 		} catch (err) {
+			let message = 'Не удалось создать аккаунт. Попробуйте позже.'
 			if (isAxiosError(err)) {
 				const detail = err.response?.data?.detail as
 					| { code?: string }
 					| undefined
-				setSubmitError(
-					mapSignupApiError(err.response?.status, detail?.code),
-				)
-			} else {
-				setSubmitError('Не удалось создать аккаунт. Попробуйте позже.')
+				message = mapSignupApiError(err.response?.status, detail?.code)
 			}
+			setSubmitError(message)
+			notifyError(message)
 		} finally {
 			setIsSubmitting(false)
 		}

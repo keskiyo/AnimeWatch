@@ -78,7 +78,14 @@ export function useAnimePlayerState({
 		providers.length > 0
 			? providers
 			: player?.available
-				? [{ id: 'kodik', label: 'Kodik' }]
+				? [
+						{
+							id: 'kodik',
+							label: 'Kodik',
+							kind: 'iframe',
+							available: true,
+						},
+					]
 				: []
 
 	// iframe src = link of the active dubbing track + selected episode

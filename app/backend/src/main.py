@@ -49,8 +49,6 @@ app.include_router(internal_catalog_router)
 
 @app.on_event("startup")
 async def _startup() -> None:
-    # Lightweight schema init (no Alembic in this project). Sync itself is
-    # NEVER started here automatically — only the weekly recent check.
     ensure_anime_catalog_schema(env.database_path)
     ensure_sync_state_schema(env.database_path)
     seed_admin_user()

@@ -62,8 +62,7 @@ def normalize_shikimori_gql_anime(
         "studio": studio_name,
         "type": KIND_TO_TYPE.get(str(raw.get("kind") or ""), "tv"),
         "status": GQL_STATUS_TO_APP.get(str(raw.get("status") or ""), "released"),
-        "year": year_of(aired_on)
-        or datetime.fromisoformat(now.replace("Z", "+00:00")).year,
+        "year": year_of(aired_on) or 0,
         "episodes_total": int(raw.get("episodes") or 0),
         "episodes_aired": int(raw.get("episodesAired") or 0),
         "rating": to_float(raw.get("score")),
@@ -121,8 +120,7 @@ def normalize_shikimori_anime(
         "studio": str((raw.get("studios") or [{}])[0].get("name") or ""),
         "type": KIND_TO_TYPE.get(raw.get("kind"), "tv"),
         "status": STATUS_TO_APP.get(raw.get("status"), "released"),
-        "year": year_of(aired_on)
-        or datetime.fromisoformat(now.replace("Z", "+00:00")).year,
+        "year": year_of(aired_on) or 0,
         "episodes_total": int(raw.get("episodes") or 0),
         "episodes_aired": int(raw.get("episodes_aired") or 0),
         "rating": to_float(raw.get("score")),

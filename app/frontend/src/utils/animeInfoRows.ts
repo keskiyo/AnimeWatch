@@ -4,13 +4,13 @@ import {
 	formatAgeRating,
 	formatAnimeType,
 	formatDuration,
-	formatEpisodes,
 	formatRatingMpaa,
 	formatSeason,
 	formatSource,
 	formatStatus,
-	getNextEpisodeText,
-} from '@/utils/animePageFormatters'
+} from '@/utils/animePageLabels'
+import { formatAnimeReleaseYear } from '@/utils/animeYear'
+import { formatEpisodes, getNextEpisodeText } from '@/utils/animePageFormatters'
 
 /** Build the info panel rows for the anime hero section. */
 export function createInfoRows(
@@ -49,7 +49,7 @@ export function createInfoRows(
 	// ── Сезон / Статус / Выпуск ───────────────────────────────────────────────
 	rows.push({ label: 'Сезон', value: formatSeason(anime), tone: 'accent' })
 	rows.push({ label: 'Статус', value: formatStatus(anime.status) })
-	rows.push({ label: 'Выпуск', value: String(anime.year) })
+	rows.push({ label: 'Выпуск', value: formatAnimeReleaseYear(anime) })
 
 	// ── Рейтинг MPAA (R-17, PG-13, …) ────────────────────────────────────────
 	if (anime.rating_mpaa) {

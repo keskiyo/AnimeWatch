@@ -22,12 +22,17 @@ router = APIRouter(prefix="/api", tags=["anime"])
 async def anime_catalog(
     search: str | None = None,
     genre: str | None = None,
+    genres: str | None = None,
     status: str | None = None,
     year: str | None = None,
+    year_from: str | None = None,
+    year_to: str | None = None,
     season: str | None = None,
     type: str | None = None,
+    age_rating: str | None = None,
     sort: str | None = None,
     order: str | None = None,
+    direction: str | None = None,
     page: str | None = "1",
     limit: str | None = "24",
 ) -> dict:
@@ -72,7 +77,7 @@ async def anime_episodes(anime_id: int) -> list[dict]:
 
 @router.get("/studio/{studio_name}/anime")
 async def studio_anime_list(studio_name: str) -> dict:
-    """All anime produced by *studio_name*, fetched from Shikimori (1 h cache)."""
+    """All anime produced by *studio_name*, read from SQLite when available."""
     return await get_studio_anime(studio_name)
 
 

@@ -39,7 +39,7 @@ function mergeResults(primary: Anime[], secondary: Anime[]): Anime[] {
 
 /**
  * Anime search: instant preview from the client cache + debounced backend
- * search (the cache is partial, so the API stays the source of truth).
+ * search (the backend API stays the source of truth).
  */
 export function useAnimeSearch(query: string) {
 	const [apiResults, setApiResults] = useState<Anime[]>([])
@@ -56,7 +56,7 @@ export function useAnimeSearch(query: string) {
 		[cachedAnime, trimmedQuery],
 	)
 
-	// API results first (more complete via Shikimori), then cache extras
+	// API results first (backend source of truth), then cache extras
 	const results = useMemo(
 		() => mergeResults(apiResults, cacheResults),
 		[apiResults, cacheResults],

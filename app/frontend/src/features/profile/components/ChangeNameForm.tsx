@@ -7,7 +7,7 @@ import {
 } from '@/features/header/components/auth/AuthFormControls'
 import type { AuthUser } from '@/types/auth'
 import { validateName } from '@/utils/authValidation'
-import { notifySuccess } from '@/utils/notify'
+import { notifyError, notifySuccess } from '@/utils/notify'
 import { useState, type SyntheticEvent } from 'react'
 
 type ChangeNameFormProps = {
@@ -39,7 +39,9 @@ export function ChangeNameForm({ user }: ChangeNameFormProps) {
 			setSuccess(true)
 			notifySuccess('Имя обновлено')
 		} catch {
-			setError('Не удалось изменить имя')
+			const message = 'Не удалось изменить имя'
+			setError(message)
+			notifyError(message)
 		} finally {
 			setIsSubmitting(false)
 		}
