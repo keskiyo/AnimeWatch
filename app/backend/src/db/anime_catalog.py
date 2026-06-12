@@ -9,12 +9,13 @@ sync bookkeeping in src/db/sync_state.py.
 
 import json
 import sqlite3
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
 from src.models import Anime
 
-_connections: dict[str, sqlite3.Connection] = {}
+_connections: dict[tuple[str, int], sqlite3.Connection] = {}
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS anime_catalog (
@@ -88,14 +89,15 @@ ON CONFLICT(id) DO UPDATE SET
 
 
 def connect(database_path: str) -> sqlite3.Connection:
-    """Shared connection per database path (rows as sqlite3.Row)."""
-    if database_path not in _connections:
+    """Shared connection per database path and thread (rows as sqlite3.Row)."""
+    key = (database_path, threading.get_ident())
+    if key not in _connections:
         if database_path != ":memory:":
             Path(database_path).resolve().parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(database_path, check_same_thread=False)
+        conn = sqlite3.connect(database_path)
         conn.row_factory = sqlite3.Row
-        _connections[database_path] = conn
-    return _connections[database_path]
+        _connections[key] = conn
+    return _connections[key]
 
 
 # Detail-page fields persisted on first visit (lightweight migrations)

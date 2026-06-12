@@ -1,6 +1,7 @@
 import { AnimePlayerSidebar } from '@/features/animepage/components/player/AnimePlayerSidebar'
 import type { AnimePlayerSidebarProps } from '@/types/animePage'
 import { X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 type AnimePlayerOptionsDrawerProps = AnimePlayerSidebarProps & {
 	isOpen: boolean
@@ -12,7 +13,19 @@ export function AnimePlayerOptionsDrawer({
 	onClose,
 	...sidebarProps
 }: AnimePlayerOptionsDrawerProps) {
-	if (!isOpen) return null
+	const [isMounted, setIsMounted] = useState(isOpen)
+
+	useEffect(() => {
+		if (isOpen) {
+			setIsMounted(true)
+			return
+		}
+
+		const timeout = window.setTimeout(() => setIsMounted(false), 260)
+		return () => window.clearTimeout(timeout)
+	}, [isOpen])
+
+	if (!isMounted) return null
 
 	return (
 		<div className='fixed inset-0 z-50 min-[761px]:hidden'>
@@ -20,9 +33,15 @@ export function AnimePlayerOptionsDrawer({
 				type='button'
 				aria-label='Закрыть выбор озвучки'
 				onClick={onClose}
-				className='absolute inset-0 cursor-pointer bg-black/55'
+				className={`absolute inset-0 cursor-pointer bg-black/55 transition-opacity duration-250 ease-out ${
+					isOpen ? 'opacity-100' : 'opacity-0'
+				}`}
 			/>
-			<aside className='absolute bottom-0 right-0 top-0 w-[min(82vw,320px)] border-l border-aw-border bg-aw-surface p-4 shadow-2xl'>
+			<aside
+				className={`absolute bottom-0 right-0 top-0 w-[min(82vw,320px)] border-l border-aw-border bg-aw-surface p-4 shadow-2xl transition-transform duration-250 ease-out will-change-transform ${
+					isOpen ? 'translate-x-0' : 'translate-x-full'
+				}`}
+			>
 				<div className='mb-8 flex items-center justify-between gap-3'>
 					<h3 className='m-0 text-lg font-normal text-aw-text'>
 						Выберите озвучку и плеер

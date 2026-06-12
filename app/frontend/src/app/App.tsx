@@ -1,5 +1,6 @@
 import { Footer } from '@/components/layout/Footer'
 import { Header } from '@/components/layout/Header'
+import { AdminPage } from '@/pages/admin/AdminPage'
 import { AnimePage } from '@/pages/anime/AnimePage'
 import { CatalogOngoingPage } from '@/pages/anime/CatalogOngoing'
 import { CatalogPage } from '@/pages/anime/CatalogPage'
@@ -24,6 +25,7 @@ export function App() {
 				<div className='flex-1'>
 					<Routes>
 						<Route path='/' element={<HomePage />} />
+						<Route path='/admin' element={<AdminPage />} />
 						<Route path='/anime' element={<CatalogPage />} />
 						<Route
 							path='/ongoing'

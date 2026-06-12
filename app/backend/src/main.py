@@ -10,8 +10,11 @@ configure_logging()
 log = get_logger(__name__)
 
 from src.db.anime_catalog import ensure_anime_catalog_schema
+from src.db.admin_audit import ensure_admin_audit_schema
 from src.db.sync_state import ensure_sync_state_schema
+from src.routers.admin_audit import router as admin_audit_router
 from src.routers.admin_sync import router as admin_sync_router
+from src.routers.admin_users import router as admin_users_router
 from src.routers.anime import router as anime_router
 from src.routers.auth import router as auth_router
 from src.routers.comments import router as comments_router
@@ -43,6 +46,8 @@ app.include_router(player_router)
 app.include_router(library_router)
 app.include_router(auth_router)
 app.include_router(comments_router)
+app.include_router(admin_audit_router)
+app.include_router(admin_users_router)
 app.include_router(admin_sync_router)
 app.include_router(internal_catalog_router)
 
@@ -50,6 +55,7 @@ app.include_router(internal_catalog_router)
 @app.on_event("startup")
 async def _startup() -> None:
     ensure_anime_catalog_schema(env.database_path)
+    ensure_admin_audit_schema(env.database_path)
     ensure_sync_state_schema(env.database_path)
     seed_admin_user()
     await maybe_start_daily_recent_sync(env)

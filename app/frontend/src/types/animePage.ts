@@ -77,6 +77,7 @@ export type AnimegoVoices =
 	| { available: false; provider: 'animego'; message: string }
 
 export type AnimePlayerProps = {
+	animeId: number
 	title: string
 	background: string
 	tracks: AnimePlayerTrack[]

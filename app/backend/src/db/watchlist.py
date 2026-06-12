@@ -21,11 +21,25 @@ CREATE TABLE IF NOT EXISTS watchlist_categories (
 CREATE INDEX IF NOT EXISTS idx_watchlist_categories_user
 ON watchlist_categories (user_id, added_at DESC);
 """
+_DEDUP_SQL = """
+DELETE FROM watchlist_categories
+WHERE rowid NOT IN (
+    SELECT MAX(rowid)
+    FROM watchlist_categories
+    GROUP BY user_id, anime_id
+);
+"""
+_UNIQUE_SQL = """
+CREATE UNIQUE INDEX IF NOT EXISTS idx_watchlist_categories_one_status
+ON watchlist_categories (user_id, anime_id);
+"""
 
 
 def ensure_watchlist_schema(database_path: str) -> None:
     conn = connect(database_path)
     conn.executescript(_SCHEMA)
+    conn.execute(_DEDUP_SQL)
+    conn.execute(_UNIQUE_SQL)
     conn.commit()
 
 
@@ -79,14 +93,17 @@ def toggle_watchlist_status(
     if existing:
         conn.execute(
             """
-            DELETE FROM watchlist_categories
-            WHERE user_id = ? AND anime_id = ? AND status = ?
+            DELETE FROM watchlist_categories WHERE user_id = ? AND anime_id = ?
             """,
-            (user_id, anime_id, status),
+            (user_id, anime_id),
         )
         conn.commit()
         return False
 
+    conn.execute(
+        "DELETE FROM watchlist_categories WHERE user_id = ? AND anime_id = ?",
+        (user_id, anime_id),
+    )
     conn.execute(
         """
         INSERT INTO watchlist_categories (user_id, anime_id, status, added_at)

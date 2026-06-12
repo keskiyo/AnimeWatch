@@ -10,6 +10,9 @@ type UseAnimePlayerStateArgs = {
 	activeTrackId?: string
 	activeEpisodeTitle: string
 	onTrackChange?: (trackId: string) => void
+	/** Episode count known by a backup provider (AnimeGO) — keeps the episode
+	 *  selector alive even when Kodik is unavailable. */
+	extraEpisodesCount?: number
 }
 
 /**
@@ -23,17 +26,21 @@ export function useAnimePlayerState({
 	activeTrackId,
 	activeEpisodeTitle,
 	onTrackChange,
+	extraEpisodesCount = 0,
 }: UseAnimePlayerStateArgs) {
 	// Max episode count across all dubbing tracks (teams differ in progress)
+	// plus whatever a backup provider knows
 	const availableEpisodesCount = useMemo(() => {
-		if (!player?.available) return 0
-		const counts = [
-			player.episodes_count,
-			...tracks.map(t => t.episodesCount ?? 0),
-		]
+		const counts = [extraEpisodesCount]
+		if (player?.available) {
+			counts.push(
+				player.episodes_count,
+				...tracks.map(t => t.episodesCount ?? 0),
+			)
+		}
 		const max = Math.max(...counts)
 		return max > 0 ? max : 0
-	}, [player, tracks])
+	}, [player, tracks, extraEpisodesCount])
 
 	const [activeEpisode, setActiveEpisode] = useState<number | undefined>(
 		availableEpisodesCount > 0 ? 1 : undefined,

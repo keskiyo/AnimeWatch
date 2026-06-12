@@ -48,9 +48,7 @@ export function AnimePageHero({ data }: AnimePageHeroProps) {
 			</div>
 			<div
 				className={`mt-8 grid gap-4 overflow-hidden text-base leading-relaxed text-aw-text max-[760px]:mt-5 max-[760px]:text-[15px] max-[760px]:leading-[1.55] ${
-					isDescriptionExpanded
-						? ''
-						: 'max-[760px]:max-h-[15.5rem]'
+					isDescriptionExpanded ? '' : 'max-[760px]:max-h-62'
 				}`}
 			>
 				{data.description.map(paragraph => (

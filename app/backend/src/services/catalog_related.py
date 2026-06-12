@@ -8,14 +8,13 @@ def enrich_related_from_catalog(
     database_path: str,
     related_items: list[dict],
 ) -> list[dict]:
-    """Prefer local catalog fields for related anime when the row exists."""
+    """Return only related anime that exist in the local catalog."""
     ids = [int(item.get("id") or 0) for item in related_items]
     local_by_id = get_anime_catalog_by_ids(database_path, ids)
     enriched: list[dict] = []
     for item in related_items:
         local = local_by_id.get(int(item.get("id") or 0))
         if not local:
-            enriched.append(item)
             continue
 
         enriched.append(

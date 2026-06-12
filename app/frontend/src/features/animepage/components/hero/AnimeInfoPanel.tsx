@@ -32,17 +32,14 @@ function InfoLink({ link }: { link: AnimeInfoLink }) {
 
 export function AnimeInfoPanel({ rows }: AnimeInfoPanelProps) {
 	return (
-		<dl className='grid flex-1 grid-cols-[210px_minmax(0,1fr)] gap-x-12 gap-y-3 text-sm max-[760px]:grid-cols-1 max-[760px]:gap-y-1.5'>
+		<dl className='grid flex-1 grid-cols-[210px_minmax(0,1fr)] gap-x-12 gap-y-3 text-sm max-[760px]:grid-cols-[minmax(132px,38%)_minmax(0,1fr)] max-[760px]:gap-x-3 max-[760px]:gap-y-2.5 max-[760px]:text-[13px]'>
 			{rows.map(row => (
-				<div
-					key={`${row.label}-${row.value}`}
-					className='contents max-[760px]:block'
-				>
+				<div key={`${row.label}-${row.value}`} className='contents'>
 					<dt className='flex items-center gap-1.5 text-aw-subtle'>
 						{row.label}
 					</dt>
 					<dd
-						className={`m-0 leading-relaxed ${
+						className={`m-0 min-w-0 wrap-break-word leading-relaxed ${
 							row.tone === 'accent'
 								? 'text-aw-accent'
 								: 'text-aw-text'
