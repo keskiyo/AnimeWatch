@@ -1,6 +1,6 @@
 import type { AdminUser } from '@/types/admin'
 import { X } from 'lucide-react'
-import { FormEvent, useState } from 'react'
+import { SyntheticEvent, useState } from 'react'
 
 type AdminPasswordResetModalProps = {
 	user: AdminUser
@@ -18,7 +18,7 @@ export function AdminPasswordResetModal({
 	const [password, setPassword] = useState('')
 	const [error, setError] = useState('')
 
-	async function handleSubmit(event: FormEvent) {
+	async function handleSubmit(event: SyntheticEvent) {
 		event.preventDefault()
 		if (password.trim().length < 8) {
 			setError('Пароль должен быть не короче 8 символов')

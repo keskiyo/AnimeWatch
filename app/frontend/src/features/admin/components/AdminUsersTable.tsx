@@ -1,27 +1,28 @@
 import { resolveAvatarUrl } from '@/api/authApi'
+import { AdminUserActions } from '@/features/admin/components/AdminUserActions'
 import type { AdminUser } from '@/types/admin'
-import { KeyRound } from 'lucide-react'
 
 type AdminUsersTableProps = {
 	users: AdminUser[]
 	isLoading: boolean
 	onResetPassword: (user: AdminUser) => void
+	onChangeRole: (user: AdminUser) => void
+	onToggleBlock: (user: AdminUser) => void
 }
 
-export function AdminUsersTable({
-	users,
-	isLoading,
-	onResetPassword,
-}: AdminUsersTableProps) {
+export function AdminUsersTable(props: AdminUsersTableProps) {
+	const { users, isLoading } = props
 	return (
-		<div className='overflow-hidden rounded-md border border-aw-border'>
-			<table className='w-full border-collapse text-left text-sm'>
+		<div className='overflow-x-auto rounded-md border border-aw-border'>
+			<table className='w-full min-w-250 border-collapse text-left text-sm'>
 				<thead className='bg-aw-elevated text-aw-subtle'>
 					<tr>
 						<th className='px-4 py-3 font-medium'>Пользователь</th>
 						<th className='px-4 py-3 font-medium'>Email</th>
 						<th className='px-4 py-3 font-medium'>Роль</th>
+						<th className='px-4 py-3 font-medium'>Статус</th>
 						<th className='px-4 py-3 font-medium'>Регистрация</th>
+						<th className='px-4 py-3 font-medium'>Был на сайте</th>
 						<th className='px-4 py-3 font-medium'>Действия</th>
 					</tr>
 				</thead>
@@ -29,19 +30,10 @@ export function AdminUsersTable({
 					{isLoading && users.length === 0 ? (
 						<UserRowsSkeleton />
 					) : users.length > 0 ? (
-						users.map(user => (
-							<UserRow
-								key={user.id}
-								user={user}
-								onResetPassword={onResetPassword}
-							/>
-						))
+						users.map(user => <UserRow key={user.id} user={user} {...props} />)
 					) : (
 						<tr>
-							<td
-								colSpan={5}
-								className='px-4 py-8 text-center text-aw-subtle'
-							>
+							<td colSpan={7} className='px-4 py-8 text-center text-aw-subtle'>
 								Пользователи не найдены
 							</td>
 						</tr>
@@ -55,10 +47,9 @@ export function AdminUsersTable({
 function UserRow({
 	user,
 	onResetPassword,
-}: {
-	user: AdminUser
-	onResetPassword: (user: AdminUser) => void
-}) {
+	onChangeRole,
+	onToggleBlock,
+}: AdminUsersTableProps & { user: AdminUser }) {
 	return (
 		<tr className='text-aw-text'>
 			<td className='px-4 py-3'>
@@ -75,32 +66,46 @@ function UserRow({
 				</div>
 			</td>
 			<td className='px-4 py-3 text-aw-subtle'>{user.email}</td>
+			<td className='px-4 py-3'>{user.role}</td>
 			<td className='px-4 py-3'>
-				<span className='rounded bg-aw-elevated px-2 py-1 text-xs text-aw-text'>
-					{user.role}
+				<span className={statusClassName(user.is_blocked)}>
+					{user.is_blocked ? 'Заблокирован' : 'Активен'}
 				</span>
 			</td>
+			<td className='px-4 py-3 text-aw-subtle'>{formatDate(user.created_at)}</td>
 			<td className='px-4 py-3 text-aw-subtle'>
-				{new Date(user.created_at).toLocaleDateString('ru-RU')}
+				{user.last_seen_at ? formatDateTime(user.last_seen_at) : 'Неизвестно'}
 			</td>
 			<td className='px-4 py-3'>
-				<button
-					type='button'
-					onClick={() => onResetPassword(user)}
-					className='inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-aw-border bg-transparent px-3 text-aw-text hover:border-aw-accent hover:text-aw-accent'
-				>
-					<KeyRound size={16} aria-hidden='true' />
-					Пароль
-				</button>
+				<AdminUserActions
+					user={user}
+					onResetPassword={onResetPassword}
+					onChangeRole={onChangeRole}
+					onToggleBlock={onToggleBlock}
+				/>
 			</td>
 		</tr>
 	)
 }
 
+function statusClassName(isBlocked: number) {
+	return `rounded px-2 py-1 text-xs ${
+		isBlocked ? 'bg-aw-accent/20 text-aw-accent' : 'bg-aw-elevated text-aw-text'
+	}`
+}
+
+function formatDate(value: string) {
+	return new Date(value).toLocaleDateString('ru-RU')
+}
+
+function formatDateTime(value: string) {
+	return new Date(value).toLocaleString('ru-RU')
+}
+
 function UserRowsSkeleton() {
 	return Array.from({ length: 4 }).map((_, index) => (
 		<tr key={index}>
-			<td colSpan={5} className='px-4 py-3'>
+			<td colSpan={7} className='px-4 py-3'>
 				<div className='h-10 animate-pulse rounded bg-aw-elevated' />
 			</td>
 		</tr>

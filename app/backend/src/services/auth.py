@@ -3,6 +3,7 @@
 import re
 
 from src.config import get_settings
+from src.db.admin_users import is_user_blocked, touch_user_last_seen
 from src.db.users import (
     create_session,
     create_user,
@@ -50,7 +51,6 @@ def register_user(name: str, email: str, password: str) -> dict:
     name, email = name.strip(), email.strip()
     validate_registration(name, email, password)
     db = _db()
-    ensure_users_schema(db)
     if email_exists(db, email) or find_user_by_login(db, name):
         raise AuthError("email_taken", "Пользователь уже зарегистрирован")
     user = create_user(db, name, email, password)
@@ -61,10 +61,11 @@ def register_user(name: str, email: str, password: str) -> dict:
 
 def login_user(login: str, password: str) -> dict:
     db = _db()
-    ensure_users_schema(db)
     user = find_user_by_login(db, login.strip())
     if not user or not verify_password(password, user.pop("password_hash", "")):
         raise AuthError("invalid_credentials", "Неверный логин или пароль")
+    if is_user_blocked(db, int(user["id"])):
+        raise AuthError("blocked", "Аккаунт заблокирован")
     token = create_session(db, user["id"])
     return {"token": token, "user": user}
 
@@ -72,9 +73,13 @@ def login_user(login: str, password: str) -> dict:
 def get_current_user(token: str | None) -> dict:
     if not token:
         raise AuthError("unauthorized", "Требуется авторизация")
-    user = get_user_by_token(_db(), token)
+    db = _db()
+    user = get_user_by_token(db, token)
     if not user:
         raise AuthError("unauthorized", "Сессия истекла")
+    if is_user_blocked(db, int(user["id"])):
+        raise AuthError("blocked", "Аккаунт заблокирован")
+    touch_user_last_seen(db, int(user["id"]))
     return user
 
 

@@ -1,7 +1,7 @@
 export type AnimeType = 'tv' | 'ova' | 'movie' | 'ona' | 'special'
 export type AnimeStatus = 'ongoing' | 'released' | 'announced'
 export type AnimeSeason = 'winter' | 'spring' | 'summer' | 'fall'
-export type PlayerName = 'kodik' | 'aniboom'
+export type PlayerName = 'kodik'
 export type WatchlistStatus =
 	| 'watching'
 	| 'plan_to_watch'
@@ -52,7 +52,6 @@ export type Episode = {
 	duration?: number
 	players: {
 		kodik?: { url: string; quality: string[] }
-		aniboom?: { url: string }
 	}
 	dubbing_studios: string[]
 }

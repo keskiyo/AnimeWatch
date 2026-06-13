@@ -1,9 +1,12 @@
 # AnimeWatch — документация проекта
 
 Сайт для просмотра аниме: каталог с фильтрами, страница тайтла с плеером Kodik,
-расписание серий, поиск. Данные — Shikimori (каталог/детали) + Kodik (плеер/озвучки)
+расписание серий, поиск, аккаунты с watchlist, комментарии/отзывы, админ-панель.
+Данные — Shikimori (каталог/детали) + Kodik (плеер/озвучки) + YummyAnime
+(запасные описания).
 
-- YummyAnime (запасные описания).
+Плеер на сайте один — **Kodik** (iframe-embed). Резервные плееры (aniboom/cvh)
+были удалены; вся player-логика идёт только через Kodik.
 
 ---
 
@@ -33,23 +36,40 @@ app/
 │       ├── models.py           # TypedDict Anime
 │       ├── routers/            # HTTP-слой (тонкие обработчики)
 │       │   ├── anime.py        #   /api/anime*, /api/animes/*, studio, dubbing
-│       │   ├── player.py       #   /api/player/*, /api/schedule, /api/studios
-│       │   ├── library.py      #   watchlist, progress, settings, notifications
-│       │   ├── system.py       #   /api/health, /api/image-proxy
-│       │   └── admin_sync.py   #   /admin/sync/shikimori/* (full/recent/status)
+│       │   ├── player.py       #   /api/player/kodik/*, /api/schedule, /api/studios
+│       │   ├── library.py      #   watchlist, progress, settings
+│       │   ├── system.py       #   /api/health, /api/image-proxy, public users/avatars
+│       │   ├── auth.py         #   register/login/logout/me/avatar/password/name
+│       │   ├── comments.py     #   комментарии/отзывы: list/create/vote/edit/delete
+│       │   ├── static_pages.py #   публичные статические страницы из SQLite
+│       │   ├── seo.py          #   /sitemap.xml (канонические URL для роботов)
+│       │   ├── admin_auth.py   #   проверка admin-сессии (зависимость)
+│       │   ├── admin_users.py / admin_user_actions.py  # управление юзерами
+│       │   ├── admin_static_pages.py  # CMS статических страниц
+│       │   ├── admin_audit.py  #   журнал admin-действий
+│       │   ├── admin_sync.py   #   /admin/sync/shikimori/* (full/recent/status)
+│       │   └── internal_catalog.py    # cron /internal/catalog/refresh
 │       ├── db/
 │       │   ├── anime_catalog.py         # ПОСТОЯННАЯ таблица каталога: схема, upsert
 │       │   ├── anime_catalog_queries.py # чтение: фильтры, сортировка, страницы, stats
+│       │   ├── anime_catalog_lookup.py  # точечные lookups (by ids/studio/schedule)
 │       │   ├── sync_state.py            # состояние синхронизаций (key-value)
 │       │   ├── cache.py                 # TTL-кеш api_cache
-│       │   └── library.py               # watchlist/progress/settings store
+│       │   ├── users.py                 # users/sessions/scrypt-хеши
+│       │   ├── admin_users.py / admin_audit.py  # admin-запросы + журнал
+│       │   ├── comments.py              # комментарии/голоса/ответы
+│       │   ├── static_pages.py          # таблица статических страниц (CMS)
+│       │   └── library.py / watchlist.py  # watchlist/progress/settings store
 │       ├── services/
 │       │   ├── shikimori/      # слой данных Shikimori (см. §4)
 │       │   ├── kodik/          # слой данных Kodik (client/normalize/dubbing)
-│       │   ├── catalog.py      # сервисы каталога для роутеров
-│       │   ├── content.py      # episodes, schedule, studios
-│       │   ├── library.py      # сервисы watchlist/settings
-│       │   └── yummyanime.py   # запасные описания
+│       │   ├── catalog.py / catalog_filter.py / catalog_related.py  # каталог
+│       │   ├── content.py / schedule.py  # episodes, расписание, студии
+│       │   ├── auth.py / avatars.py      # аккаунты, сессии, WEBP-аватары
+│       │   ├── library.py / watchlist.py # сервисы watchlist/settings
+│       │   ├── catalog_refresh.py        # cron-обёртка (lock/timeout/summary)
+│       │   ├── seo.py                     # anime_slug + билдер sitemap.xml
+│       │   └── yummyanime.py             # запасные описания
 │       └── scripts/
 │           └── sync_shikimori.py  # CLI: full / recent / status
 └── frontend/
@@ -57,13 +77,17 @@ app/
         ├── api/                # тонкие API-клиенты (по доменам)
         │   ├── client.ts, fallback.ts
         │   ├── catalogApi.ts, animeApi.ts, playerApi.ts, scheduleApi.ts
-        │   └── watchlistApi.ts, settingsApi.ts, notificationsApi.ts
-        ├── app/App.tsx         # роуты
-        ├── pages/              # HomePage, CatalogPage, AnimePage, StudioPage, DubbingPage…
+        │   ├── watchlistApi.ts, settingsApi.ts, authApi.ts
+        │   └── commentsApi.ts, usersApi.ts, adminApi.ts, pagesApi.ts
+        ├── app/App.tsx         # роуты + Header/Footer + ToastContainer
+        ├── pages/              # home, anime (catalog/ongoing/detail), studio,
+        │                       #   dubbing, profile, admin, footer, not-found
         ├── components/         # переиспользуемые (PosterImage, AnimeGridSection, NumberInput…)
-        ├── features/           # по фичам: catalog/, animepage/, header/, home/, ongoing/, studio/
+        ├── features/           # по фичам: catalog/, animepage/, header/, home/,
+        │                       #   ongoing/, studio/, profile/, auth/, admin/, static-pages/
         │   └── <feature>/components + hooks
-        ├── types/              # ВСЕ shared-типы (anime, animePage, catalog, search, studio)
+        ├── types/              # ВСЕ shared-типы (anime, animePage, catalog, search,
+        │                       #   studio, auth, reviews, watchlist, admin, staticPage)
         ├── utils/              # чистые функции и константы
         └── styles/index.css    # Tailwind-тема (тёмная, единственная)
 ```
@@ -142,6 +166,68 @@ sync безопасно дозапускается.
 
 ---
 
+## 5.1 Аккаунты, комментарии, админка, статические страницы
+
+- **Аккаунты** (`services/auth.py`, `db/users.py`): регистрация/логин, scrypt-хеши
+  паролей, сессии в SQLite (30 дней). Токен хранится в localStorage, юзер
+  восстанавливается на загрузке через `useAuthUser`. Открыть модалку логина
+  откуда угодно — `openAuthModal()` (`features/auth/authModalBus`). Аватары
+  оптимизируются на сервере (256×256 WEBP, `data/avatars/`), отдаются публично
+  на `/api/avatars/{user_id}`; относительные URL — через `resolveAvatarUrl()`.
+  Admin-пользователь создаётся один раз при старте (`seed_admin_user`,
+  `admin/admin`; сброс — `reset_password_cli`).
+- **Watchlist/профиль** (`routers/library.py`, `features/profile/`): статусы
+  просмотра, прогресс, настройки; свой профиль `/profile`, публичный
+  `/profile/:userId` (без email).
+- **Комментарии/отзывы** (`routers/comments.py`, `db/comments.py`): список,
+  создание, голоса (лайки), ответы, edit/delete. Все мутации перепроверяют
+  сессию и владельца на сервере (автор правит своё; админ может удалять любое,
+  но не редактировать).
+- **Админ-панель** (`/admin`, только для роли admin; `features/admin/`,
+  `routers/admin_*`): управление пользователями (роль, бан, сброс пароля),
+  CMS статических страниц, журнал admin-действий (`admin_audit`). Доступ
+  проверяется на сервере через `admin_auth`.
+- **Статические страницы** (`routers/static_pages.py` + `admin_static_pages.py`,
+  `db/static_pages.py`): тексты agreement/privacy/copyright хранятся в SQLite,
+  редактируются в админке, отдаются публично и рендерятся через
+  `features/static-pages/StaticPageView` + `pagesApi`.
+
+Безопасность: auth-проверки только на сервере (скрытие кнопки на клиенте — UX,
+не защита). Email в публичный профиль не отдаётся.
+
+---
+
+## 5.2 SEO
+
+Сайт — SPA (CSR), поэтому SEO построено на канонизации путей и динамических
+мета-тегах:
+
+- **`utils/pageMeta.ts` → `setPageMeta(...)`** на каждой странице ставит `title`,
+  `description` (очищается от BBCode/HTML и обрезается до ~160), `<link
+  rel="canonical">`, `robots`, Open Graph и Twitter Card. Canonical по
+  умолчанию = `origin + pathname` (без query) — фильтры каталога (`/anime?...`)
+  схлопываются в `/anime`.
+- **Канонический URL тайтла**: `AnimePage` редиректит любой slug на
+  `{id}-{slug}` (`createAnimeSlug`), чтобы у каждого тайтла был один URL и не
+  было дублей для роботов.
+- **`noindex`**: `/admin`, `/profile`, `/profile/:id`, 404.
+- **JSON-LD** (`utils/structuredData.ts`): для тайтла `Movie`/`TVSeries` +
+  `BreadcrumbList`.
+- **`robots.txt`** (`frontend/public/robots.txt`): запрет `/admin`, `/profile`
+  и query-URL; ссылка на `/sitemap.xml`.
+- **`/sitemap.xml`** (бэк, `routers/seo.py` + `services/seo.py`): статические
+  страницы + все тайтлы из `anime_catalog`. Базовый origin — `SITE_URL` или
+  выводится из запроса (`request.base_url`). `anime_slug` в Python зеркалит
+  фронтовый `createAnimeSlug`, поэтому URL в sitemap совпадают с каноническими.
+- **Деплой**: если SPA и API на разных хостах — настрой проксирование
+  `/sitemap.xml` на бэкенд (или генерируй статически) и задай `SITE_URL`.
+
+> Открытый пункт (большая задача): для не-Google ботов и соцскрейперов
+> (они не исполняют JS) мета/OG видны только при SSR/prerender. Рекомендуется
+> отдельным этапом добавить prerender статических роутов или edge-prerender.
+
+---
+
 ## 6. .env (app/backend/.env)
 
 ```env
@@ -154,6 +240,8 @@ ALLOW_SHIKIMORI_BULK_FALLBACK=false
 BACKEND_URL=http://127.0.0.1:3001  # нужен только cron-задаче
 CATALOG_REFRESH_TOKEN=             # секрет для /internal/catalog/refresh (503 если пуст)
 CATALOG_REFRESH_TIMEOUT_MS=7200000 # таймаут refresh-задачи (2 часа)
+SITE_URL=                          # публичный origin для абсолютных URL в sitemap.xml
+                                   # (пусто = берётся из запроса)
 ```
 
 ---

@@ -3,8 +3,7 @@ const ALLOWED_PLAYER_HOSTS = new Set([
   "kodik.cc",
   "kodik.biz",
   "kodik.online",
-  "kodikplayer.com",
-  "aniboom.one"
+  "kodikplayer.com"
 ]);
 
 export function isAllowedPlayerUrl(value: string | undefined): value is string {

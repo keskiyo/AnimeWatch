@@ -15,7 +15,7 @@ from src.services.catalog import get_anime_by_id
 
 
 async def get_user_watchlist(user_id: int) -> list[dict]:
-    items = list_user_watchlist(_db(), user_id)
+    items = await asyncio.to_thread(list_user_watchlist, _db(), user_id)
     await _attach_anime(items)
     return items
 
@@ -26,8 +26,8 @@ async def toggle_user_watchlist_status(user_id: int, input_data: dict) -> dict:
     if status not in VALID_WATCHLIST_STATUSES:
         raise ValueError(f"status must be one of {sorted(VALID_WATCHLIST_STATUSES)}")
 
-    active = toggle_watchlist_status(_db(), user_id, anime_id, status, _now())
-    statuses = list_user_anime_statuses(_db(), user_id, anime_id)
+    active = await asyncio.to_thread(toggle_watchlist_status, _db(), user_id, anime_id, status, _now())
+    statuses = await asyncio.to_thread(list_user_anime_statuses, _db(), user_id, anime_id)
     anime = await get_anime_by_id(anime_id)
     return {
         "user_id": user_id,

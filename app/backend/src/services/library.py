@@ -110,7 +110,7 @@ def get_app_settings() -> dict:
 
 def merge_settings(input_data: dict) -> dict:
     merged = {
-        "default_player": input_data.get("default_player") if input_data.get("default_player") in ["auto", "kodik", "aniboom"] else "auto",
+        "default_player": input_data.get("default_player") if input_data.get("default_player") in ["auto", "kodik"] else "auto",
         "default_quality": input_data.get("default_quality") if input_data.get("default_quality") in ["auto", "360p", "480p", "720p", "1080p"] else "auto",
         "default_dubbing": input_data.get("default_dubbing") if isinstance(input_data.get("default_dubbing"), str) and input_data.get("default_dubbing") else "auto",
         "theme": "dark",

@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Private / utility areas — keep out of the index
+Disallow: /admin
+Disallow: /profile
+
+# Query-string URLs are filter/sort variants of canonical pages — don't crawl
+Disallow: /*?
+
+Sitemap: /sitemap.xml

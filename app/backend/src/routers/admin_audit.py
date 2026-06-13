@@ -9,8 +9,8 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 @router.get("/audit")
 async def admin_audit_log(
+    page: int = 1,
     limit: int = 30,
     _admin: dict = Depends(require_admin),
 ) -> dict[str, object]:
-    logs = list_admin_audit_logs(get_settings().database_path, limit)
-    return {"data": logs}
+    return list_admin_audit_logs(get_settings().database_path, page, limit)

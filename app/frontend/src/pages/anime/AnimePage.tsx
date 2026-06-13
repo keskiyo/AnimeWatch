@@ -5,10 +5,11 @@ import { EmptyAnimePage } from '@/features/animepage/components/EmptyAnimePage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import type { AnimePageData } from '@/types/animePage'
 import { createAnimePageData } from '@/utils/animePageData'
-import { parseAnimeSlugId } from '@/utils/animeSlug'
+import { createAnimeSlug, parseAnimeSlugId } from '@/utils/animeSlug'
 import { setPageMeta } from '@/utils/pageMeta'
+import { animeJsonLd } from '@/utils/structuredData'
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 type AnimePageState =
 	| { status: 'loading' }
@@ -17,6 +18,7 @@ type AnimePageState =
 
 export function AnimePage() {
 	const { animeSlug } = useParams()
+	const navigate = useNavigate()
 	const id = parseAnimeSlugId(animeSlug)
 	const [state, setState] = useState<AnimePageState>({ status: 'loading' })
 
@@ -24,7 +26,6 @@ export function AnimePage() {
 		let isCancelled = false
 
 		async function loadAnimePage() {
-			setPageMeta('AnimeWatch')
 			if (!id) {
 				setState({ status: 'not-found' })
 				return
@@ -40,10 +41,24 @@ export function AnimePage() {
 				return
 			}
 
-			setPageMeta(
-				`${anime.title_ru || anime.title_en || 'Аниме'} — AnimeWatch`,
-				anime.description,
-			)
+			// One canonical URL per title: redirect decorative/wrong slugs to
+			// `{id}-{slug}` so crawlers don't see duplicate paths.
+			const title = anime.title_ru || anime.title_en || 'Аниме'
+			// Slug prefers the romaji/English title (matches catalog cards)
+			const slug = createAnimeSlug(id, anime.title_en || anime.title_ru)
+			if (animeSlug !== slug) {
+				navigate(`/anime/${slug}`, { replace: true })
+			}
+			const canonical = `/anime/${slug}`
+
+			setPageMeta({
+				title: `${title} — AnimeWatch`,
+				description: anime.description,
+				canonical,
+				ogType: 'video.tv_show',
+				image: anime.poster_url,
+				jsonLd: animeJsonLd(anime, canonical),
+			})
 			setState({
 				status: 'ready',
 				data: createAnimePageData(anime),

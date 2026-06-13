@@ -51,9 +51,18 @@ def add_admin_audit_log(
     connect(database_path).commit()
 
 
-def list_admin_audit_logs(database_path: str, limit: int = 30) -> list[dict[str, Any]]:
+def list_admin_audit_logs(
+    database_path: str,
+    page: int = 1,
+    limit: int = 30,
+) -> dict[str, Any]:
     ensure_admin_audit_schema(database_path)
+    safe_page = max(1, page)
     safe_limit = max(1, min(limit, 100))
+    offset = (safe_page - 1) * safe_limit
+    total = connect(database_path).execute(
+        "SELECT COUNT(*) FROM admin_audit_log"
+    ).fetchone()
     rows = connect(database_path).execute(
         """
         SELECT
@@ -68,8 +77,12 @@ def list_admin_audit_logs(database_path: str, limit: int = 30) -> list[dict[str,
         FROM admin_audit_log AS log
         LEFT JOIN users ON users.id = log.admin_user_id
         ORDER BY log.id DESC
-        LIMIT ?
+        LIMIT ? OFFSET ?
         """,
-        (safe_limit,),
+        (safe_limit, offset),
     ).fetchall()
-    return [dict(row) for row in rows]
+    return {
+        "data": [dict(row) for row in rows],
+        "total": int(total[0]) if total else 0,
+        "page": safe_page,
+    }

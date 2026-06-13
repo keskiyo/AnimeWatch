@@ -43,9 +43,12 @@ async def fetch_yummyanime_description(
         shikimori_id, title_ru, title_en, mal_id, endpoint, token
     )
 
-    # Cache even empty results so we don't retry on every request
-    cache.set_json(cache_key, result or "", _CACHE_TTL)
-    return result or ""
+    # result is None only when every lookup errored (transient) — don't cache
+    # that as "no description". Cache "" only for a genuine successful miss.
+    if result is None:
+        return ""
+    cache.set_json(cache_key, result, _CACHE_TTL)
+    return result
 
 
 async def _search_description(
@@ -56,14 +59,19 @@ async def _search_description(
     endpoint: str,
     token: str | None,
 ) -> str | None:
+    """Description text, "" for a successful no-match, or None when every request
+    errored (so the caller avoids caching a transient failure)."""
     headers: dict[str, str] = {"Accept": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
+    queries = _build_queries(title_ru, title_en)
+    any_success = False
     # Try Russian title first, then English title
-    for query in _build_queries(title_ru, title_en):
+    for query in queries:
         try:
             items = await _fetch_search(endpoint, query, headers)
+            any_success = True
             match = _find_match(items, shikimori_id, mal_id)
             if match:
                 desc = (match.get("description") or "").strip()
@@ -73,7 +81,9 @@ async def _search_description(
             log.warning("[yummyanime] search %r failed: %s", query, exc)
             await asyncio.sleep(0.5)
 
-    return None
+    # Genuine empty when a search succeeded (or there were no titles to query);
+    # None when all attempts errored — don't poison the cache with that.
+    return "" if (any_success or not queries) else None
 
 
 def _build_queries(title_ru: str, title_en: str) -> list[str]:

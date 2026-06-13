@@ -10,6 +10,11 @@ _STATUS_RANK_SQL = (
     "CASE status WHEN 'ongoing' THEN 0 WHEN 'released' THEN 1 ELSE 2 END"
 )
 
+# Hide titles confirmed to have no Kodik dubbing (has_kodik = 0). Unchecked
+# (NULL) and available (1) stay visible, so the catalog never empties out
+# before the first availability pass runs.
+_KODIK_VISIBLE = "(has_kodik IS NULL OR has_kodik != 0)"
+
 _SORTS: dict[str, str] = {
     "rating": "rating",
     "popularity": "score_count",
@@ -31,9 +36,27 @@ def get_anime_catalog_by_id(database_path: str, anime_id: int) -> Anime | None:
 def get_anime_catalog_all(database_path: str) -> list[Anime]:
     """Full catalog in default order: ongoing → released → announced, year desc."""
     rows = connect(database_path).execute(
-        f"SELECT * FROM anime_catalog ORDER BY {_STATUS_RANK_SQL}, year DESC, rating DESC"
+        f"SELECT * FROM anime_catalog WHERE {_KODIK_VISIBLE} "
+        f"ORDER BY {_STATUS_RANK_SQL}, year DESC, rating DESC"
     ).fetchall()
     return [row_to_anime(row) for row in rows]
+
+
+def get_sitemap_rows(database_path: str) -> list[dict]:
+    """Lightweight rows for the sitemap: id + best title + last update."""
+    rows = connect(database_path).execute(
+        "SELECT id, title_ru, title_en, updated_at FROM anime_catalog "
+        f"WHERE {_KODIK_VISIBLE} ORDER BY {_STATUS_RANK_SQL}, year DESC"
+    ).fetchall()
+    return [
+        {
+            "id": row["id"],
+            # romaji/English first — matches the canonical slug the SPA builds
+            "title": row["title_en"] or row["title_ru"] or "",
+            "updated_at": row["updated_at"] or "",
+        }
+        for row in rows
+    ]
 
 
 def get_anime_catalog_count(
@@ -140,7 +163,10 @@ def _build_filters(query: dict[str, str | None]) -> tuple[str, list[Any]]:
             args.append(f'%"{genre}"%')
         where.append("(" + " OR ".join(genre_clauses) + ")")
 
-    return (" WHERE " + " AND ".join(where)) if where else "", args
+    # Always hide confirmed-no-Kodik titles from listings/search/pages
+    where.append(_KODIK_VISIBLE)
+
+    return " WHERE " + " AND ".join(where), args
 
 
 def _order_clause(query: dict[str, str | None]) -> str:

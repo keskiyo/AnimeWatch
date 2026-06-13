@@ -5,10 +5,13 @@ import { useEffect } from 'react'
 
 export function CatalogPage() {
 	useEffect(() => {
-		setPageMeta(
-			'Каталог аниме — AnimeWatch',
-			'Полный каталог аниме. Сортировка по рейтингу, новизне и дате добавления. Фильтры по жанрам, типу, году и статусу.',
-		)
+		setPageMeta({
+			title: 'Каталог аниме — AnimeWatch',
+			description:
+				'Полный каталог аниме. Сортировка по рейтингу, новизне и дате добавления. Фильтры по жанрам, типу, году и статусу.',
+			// Filters live in the query string — collapse all of them to /anime.
+			canonical: '/anime',
+		})
 	}, [])
 
 	return (

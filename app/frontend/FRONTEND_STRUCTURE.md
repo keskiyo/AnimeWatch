@@ -26,12 +26,14 @@
 - `fallback.ts` — безопасный wrapper для fallback response.
 - `catalogApi.ts` — `/anime`, `/anime/bulk`, studio/dubbing catalog.
 - `animeApi.ts` — detail, related, episodes.
-- `playerApi.ts` — Kodik/AnimeGO/player providers.
+- `playerApi.ts` — Kodik player.
 - `scheduleApi.ts` — расписание и home rail helpers.
 - `authApi.ts` — login/register/me/logout/avatar/password/name.
 - `watchlistApi.ts` — watchlist mutations/reads.
 - `commentsApi.ts` — comments, votes, edit/delete.
 - `usersApi.ts` — public profiles.
+- `adminApi.ts` — admin: users, audit, user actions.
+- `pagesApi.ts` — статические страницы (публичные + admin CRUD).
 
 
 ## `src/pages/`
@@ -46,7 +48,10 @@
 - `dubbing/DubbingPage.tsx` — список по озвучке.
 - `profile/ProfilePage.tsx`, `profile/UserProfilePage.tsx` — свой и публичный
   профиль.
-- `footer/*` — статические страницы agreement/privacy/copyright.
+- `admin/AdminPage.tsx` — админ-панель (вкладки: пользователи, страницы,
+  журнал; доступ только админу).
+- `footer/*` — статические страницы agreement/privacy/copyright (контент из
+  SQLite через `pagesApi`).
 - `not-found/NotFoundPage.tsx` — 404.
 
 ## `src/components/`
@@ -78,12 +83,11 @@
 
 - `components/AnimePageContent.tsx` — собирает detail page.
 - `components/hero/*` — poster/actions/info panel/hero.
-- `components/player/*` — player frame, episodes, sidebar, placeholder, HLS.
+- `components/player/*` — Kodik iframe frame, episodes, sidebar, placeholder.
 - `components/frames/*` — screenshots и lightbox.
 - `components/comments/*` — reviews/comments UI.
 - `components/AnimeRelated.tsx` — related block.
-- `hooks/useAnimePlayerState.ts`, `useAnimegoPlayer.ts`, `useHlsPlayer.ts`,
-  `useEpisodePages.ts`, `useAnimeComments.ts`.
+- `hooks/useAnimePlayerState.ts`, `useEpisodePages.ts`, `useAnimeComments.ts`.
 
 
 ### `features/header/`
@@ -100,6 +104,22 @@
 - `components/watchlist/*` — tabs, filters, dropdowns, cards, profile watchlist.
 
 
+### `features/admin/`
+
+- `components/AdminTabs.tsx`, `AdminUsersPanel.tsx`, `AdminUsersTable.tsx`,
+  `AdminUserActions.tsx`, `AdminPasswordResetModal.tsx` — управление
+  пользователями (роль, бан, сброс пароля).
+- `components/AdminPagesPanel.tsx`, `AdminPageParts.tsx` — CMS статических
+  страниц.
+- `components/AdminAuditPanel.tsx` — журнал admin-действий.
+- `components/AdminConfirmDialog.tsx`, `AdminPagination.tsx`,
+  `AdminCommentsPlaceholder.tsx` — общие части админки.
+- `hooks/useAdminUsers.ts`, `useAdminAudit.ts`, `useAdminStaticPages.ts`.
+
+### `features/static-pages/`
+
+- `StaticPageView.tsx` — рендер статической страницы из `pagesApi`.
+
 ### Other Features
 
 - `features/home/HomeSeasonRail.tsx` — горизонтальный rail на главной.
@@ -114,7 +134,7 @@
 - `anime.ts` — Anime, RelatedAnime, KodikPlayer, WatchlistEntry, schedule.
 - `animePage.ts` — view models для detail/player.
 - `catalog.ts`, `studio.ts`, `search.ts`, `auth.ts`, `reviews.ts`,
-  `watchlist.ts`.
+  `watchlist.ts`, `admin.ts`, `staticPage.ts`.
 
 
 ## `src/utils/`
@@ -125,7 +145,8 @@
 - `animePageData.ts`, `animePagePlayerData.ts`, `animeInfoRows.ts`,
   `animePageFormatters.ts`, `animePageLabels.ts`.
 - `animeSlug.ts`, `animeRating.ts`, `imageProxy.ts`, `kodikLink.ts`.
-- `authValidation.ts`, `pageMeta.ts`, `notify.ts`, `player.ts`.
+- `authValidation.ts`, `pageMeta.ts` (title/canonical/OG/robots/JSON-LD),
+  `structuredData.ts` (anime JSON-LD), `notify.ts`, `player.ts`.
 - `watchlist.ts`, `watchlistData.ts`, `watchlist.test.ts`.
 
 
@@ -137,7 +158,7 @@
 1. `useAnimeCache` грузит `/anime/bulk` один раз за JS-сессию.
 2. Каталог, ongoing, поиск и карточки фильтруются на клиенте из cache.
 3. Detail page получает `/animes/:id` из SQLite-backed backend.
-4. Player/stream догружается отдельно и не должен блокировать hero/detail.
+4. Плеер Kodik догружается отдельно и не должен блокировать hero/detail.
 5. Toast показывается через `utils/notify.ts`; позиция задаётся в `App.tsx`.
 
 ## Verification

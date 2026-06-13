@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { setPageMeta } from '@/utils/pageMeta'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 type NotFoundPageProps = {
@@ -12,6 +13,11 @@ export function NotFoundPage({
 }: NotFoundPageProps) {
 	const navigate = useNavigate()
 	const [imgFailed, setImgFailed] = useState(false)
+
+	// No HTTP 404 in an SPA, so at least keep these out of the index.
+	useEffect(() => {
+		setPageMeta({ title: `${title} — AnimeWatch`, noindex: true })
+	}, [title])
 
 	return (
 		<main className='flex min-h-[calc(100vh-64px)] items-center justify-center px-4 py-12'>

@@ -8,6 +8,8 @@ from src.models import Anime
 _STATUS_RANK_SQL = (
     "CASE status WHEN 'ongoing' THEN 0 WHEN 'released' THEN 1 ELSE 2 END"
 )
+# Hide titles confirmed to have no Kodik dubbing (see anime_catalog_queries)
+_KODIK_VISIBLE = "(has_kodik IS NULL OR has_kodik != 0)"
 _SEASON_MARKERS_RE = re.compile(
     r"\b(\d+(st|nd|rd|th)?\s*season|season\s*\d+|part\s*\d+)\b",
     re.IGNORECASE,
@@ -42,7 +44,7 @@ def get_anime_catalog_by_ids(
 
     marks = ",".join("?" * len(ids))
     rows = connect(database_path).execute(
-        f"SELECT * FROM anime_catalog WHERE id IN ({marks})",
+        f"SELECT * FROM anime_catalog WHERE id IN ({marks}) AND {_KODIK_VISIBLE}",
         ids,
     ).fetchall()
     return {int(row["id"]): row_to_anime(row) for row in rows}
@@ -59,7 +61,7 @@ def get_anime_catalog_by_studio(
     rows = connect(database_path).execute(
         f"""
         SELECT * FROM anime_catalog
-        WHERE LOWER(studio) = LOWER(?)
+        WHERE LOWER(studio) = LOWER(?) AND {_KODIK_VISIBLE}
         ORDER BY {_STATUS_RANK_SQL}, year DESC, rating DESC
         """,
         (name,),
@@ -78,7 +80,8 @@ def get_anime_catalog_title_family(
         return []
 
     rows = connect(database_path).execute(
-        "SELECT * FROM anime_catalog WHERE title_en != '' OR title_ru != ''",
+        "SELECT * FROM anime_catalog "
+        f"WHERE (title_en != '' OR title_ru != '') AND {_KODIK_VISIBLE}",
     ).fetchall()
     items = [row_to_anime(row) for row in rows]
     current = next((item for item in items if item["id"] == current_id), None)
@@ -108,9 +111,10 @@ def get_upcoming_anime_from_catalog(
     limit_days: int,
 ) -> list[Anime]:
     rows = connect(database_path).execute(
-        """
+        f"""
         SELECT * FROM anime_catalog
         WHERE next_episode_at IS NOT NULL AND next_episode_at != ''
+          AND {_KODIK_VISIBLE}
         ORDER BY next_episode_at ASC
         LIMIT ?
         """,

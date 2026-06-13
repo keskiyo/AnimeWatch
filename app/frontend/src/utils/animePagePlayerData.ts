@@ -40,7 +40,7 @@ export function createPlayerProviders(
 	player: KodikPlayer | undefined,
 ): AnimePageData['playerProviders'] {
 	if (player?.available) {
-		return [{ id: 'kodik', label: 'Kodik', kind: 'iframe', available: true }]
+		return [{ id: 'kodik', label: 'Kodik' }]
 	}
 	return []
 }

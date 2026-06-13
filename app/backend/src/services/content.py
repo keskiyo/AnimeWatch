@@ -124,7 +124,3 @@ async def get_studio_anime_availability(name: str, anime_id: int) -> dict:
             available |= episodes
 
     return {"episodes": sorted(all_episodes), "available_episodes": sorted(available)}
-
-
-def get_aniboom_player(anime_id: int, episode_number: int) -> dict:
-    return {"url": f"https://aniboom.one/embed/{anime_id}-{episode_number}"}

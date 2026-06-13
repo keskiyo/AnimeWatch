@@ -13,7 +13,7 @@ export function ProfilePage() {
 	const navigate = useNavigate()
 
 	useEffect(() => {
-		setPageMeta('Профиль — AnimeWatch')
+		setPageMeta({ title: 'Профиль — AnimeWatch', noindex: true })
 	}, [])
 
 	// Not logged in → back to home (wait for the session check first)

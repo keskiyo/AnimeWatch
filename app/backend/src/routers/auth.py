@@ -1,10 +1,17 @@
 """Auth routes: register, login, me, logout, change-password, avatar."""
 
-from fastapi import APIRouter, Body, Header, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+import asyncio
+
+from fastapi import APIRouter, Header, HTTPException, UploadFile
 
 from src.config import get_settings
 from src.db.users import set_user_avatar
+from src.schemas.requests import (
+    ChangePasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+    UpdateProfileRequest,
+)
 from src.services.auth import (
     AuthError,
     change_password,
@@ -14,12 +21,7 @@ from src.services.auth import (
     register_user,
     update_profile,
 )
-from src.services.avatars import (
-    MAX_UPLOAD_BYTES,
-    AvatarError,
-    avatar_path,
-    process_and_save_avatar,
-)
+from src.services.avatars import MAX_UPLOAD_BYTES, AvatarError, process_and_save_avatar
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -28,6 +30,7 @@ _STATUS_BY_CODE = {
     "email_taken": 409,
     "invalid_credentials": 401,
     "unauthorized": 401,
+    "blocked": 403,
 }
 
 
@@ -45,25 +48,18 @@ def _raise(error: AuthError) -> None:
 
 
 @router.post("/register", status_code=201)
-def register(body: dict = Body(...)) -> dict:
+def register(body: RegisterRequest) -> dict:
     try:
-        return register_user(
-            str(body.get("name") or ""),
-            str(body.get("email") or ""),
-            str(body.get("password") or ""),
-        )
+        return register_user(body.name, body.email, body.password)
     except AuthError as error:
         _raise(error)
-        raise  # unreachable — keeps the type checker happy
+        raise
 
 
 @router.post("/login")
-def login(body: dict = Body(...)) -> dict:
+def login(body: LoginRequest) -> dict:
     try:
-        return login_user(
-            str(body.get("login") or body.get("email") or ""),
-            str(body.get("password") or ""),
-        )
+        return login_user(body.login or body.email or "", body.password)
     except AuthError as error:
         _raise(error)
         raise
@@ -89,7 +85,6 @@ async def upload_avatar(
     file: UploadFile,
     authorization: str | None = Header(default=None),
 ) -> dict:
-    """Upload the current user's avatar (optimised to 256×256 WEBP, ~10 KB)."""
     try:
         user = get_current_user(_bearer(authorization))
     except AuthError as error:
@@ -102,21 +97,17 @@ async def upload_avatar(
     except AvatarError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
-    set_user_avatar(get_settings().database_path, user["id"], avatar_url)
+    await asyncio.to_thread(set_user_avatar, get_settings().database_path, user["id"], avatar_url)
     return {"avatar_url": avatar_url}
 
 
 @router.post("/change-password")
 def change_password_route(
-    body: dict = Body(...),
+    body: ChangePasswordRequest,
     authorization: str | None = Header(default=None),
 ) -> dict:
     try:
-        change_password(
-            _bearer(authorization),
-            str(body.get("old_password") or ""),
-            str(body.get("new_password") or ""),
-        )
+        change_password(_bearer(authorization), body.old_password, body.new_password)
         return {"success": True}
     except AuthError as error:
         _raise(error)
@@ -125,11 +116,11 @@ def change_password_route(
 
 @router.patch("/profile")
 def update_profile_route(
-    body: dict = Body(...),
+    body: UpdateProfileRequest,
     authorization: str | None = Header(default=None),
 ) -> dict:
     try:
-        return update_profile(_bearer(authorization), str(body.get("name") or ""))
+        return update_profile(_bearer(authorization), body.name)
     except AuthError as error:
         _raise(error)
         raise

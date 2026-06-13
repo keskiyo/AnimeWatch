@@ -1,6 +1,7 @@
 import { apiClient } from '@/api/client'
 import { withFallback } from '@/api/fallback'
 import type { Anime, ScheduleEntry, ScheduleResponse } from '@/types/anime'
+import { selectNewOngoings } from '@/utils/homeRail'
 
 export async function getSchedule(): Promise<Record<string, ScheduleEntry[]>> {
 	return withFallback(async () => {
@@ -33,11 +34,11 @@ export function scheduleToAnimeList(
 	return typeof limit === 'number' ? result.slice(0, limit) : result
 }
 
-/** Anime airing this season (from the release schedule) for the home rail. */
+/** New ongoings for the home rail: recently-started, not long-runners, newest first. */
 export async function getHomeSeasonAnime(limit?: number): Promise<Anime[]> {
 	return withFallback(async () => {
 		const schedule = await getSchedule()
 
-		return scheduleToAnimeList(schedule, limit)
+		return selectNewOngoings(scheduleToAnimeList(schedule), limit)
 	}, [])
 }

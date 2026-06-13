@@ -3,6 +3,7 @@
 Usage (from app/backend):
     python -m src.scripts.sync_shikimori full      # initial 1990+ import (slow)
     python -m src.scripts.sync_shikimori recent    # refresh recent years + ongoing
+    python -m src.scripts.sync_shikimori kodik     # refresh has_kodik flags only
     python -m src.scripts.sync_shikimori status    # catalog stats + sync state
 """
 
@@ -15,6 +16,7 @@ from src.db.anime_catalog import ensure_anime_catalog_schema
 from src.db.anime_catalog_queries import get_anime_catalog_stats
 from src.db.sync_state import get_all_sync_state
 from src.logger import configure_logging
+from src.services.kodik.availability import refresh_kodik_availability
 from src.services.shikimori.sync import (
     sync_shikimori_catalog_full,
     sync_shikimori_catalog_recent,
@@ -39,6 +41,10 @@ def main() -> int:
         return 0
     if command == "recent":
         result = asyncio.run(sync_shikimori_catalog_recent())
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    if command == "kodik":
+        result = asyncio.run(refresh_kodik_availability())
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     if command == "status":

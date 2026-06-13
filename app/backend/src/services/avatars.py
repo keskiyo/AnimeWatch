@@ -13,7 +13,8 @@ from PIL import Image
 from src.config import get_settings
 
 AVATAR_SIZE = 256
-MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB (compressed upload)
+MAX_IMAGE_PIXELS = 50_000_000  # decoded pixel cap — guard against zip/PNG bombs
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "GIF"}
 
 
@@ -42,7 +43,12 @@ def process_and_save_avatar(user_id: int, raw: bytes) -> str:
     try:
         image = Image.open(io.BytesIO(raw))
         image_format = (image.format or "").upper()
+        width, height = image.size  # available from the header, before decode
+        if width * height > MAX_IMAGE_PIXELS:
+            raise AvatarError("Изображение слишком большое")
         image.load()
+    except AvatarError:
+        raise
     except Exception as exc:
         raise AvatarError("Файл не является изображением") from exc
 

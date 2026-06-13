@@ -3,15 +3,23 @@ import type { AdminUser } from '@/types/admin'
 import { useEffect, useState } from 'react'
 
 type State =
-	| { status: 'loading'; users: AdminUser[]; total: number }
-	| { status: 'ready'; users: AdminUser[]; total: number }
-	| { status: 'error'; users: AdminUser[]; total: number }
+	| { status: 'loading'; users: AdminUser[]; total: number; page: number }
+	| { status: 'ready'; users: AdminUser[]; total: number; page: number }
+	| { status: 'error'; users: AdminUser[]; total: number; page: number }
 
-export function useAdminUsers(search: string, enabled: boolean) {
+export function useAdminUsers(
+	search: string,
+	role: '' | 'user' | 'admin',
+	blocked: '' | '0' | '1',
+	page: number,
+	enabled: boolean,
+	refreshKey = 0,
+) {
 	const [state, setState] = useState<State>({
 		status: 'loading',
 		users: [],
 		total: 0,
+		page: 1,
 	})
 
 	useEffect(() => {
@@ -22,14 +30,16 @@ export function useAdminUsers(search: string, enabled: boolean) {
 				status: 'loading',
 				users: prev.users,
 				total: prev.total,
+				page: prev.page,
 			}))
-			getAdminUsers({ search, limit: 50 })
+			getAdminUsers({ search, role, blocked, page, limit: 20 })
 				.then(result => {
 					if (!cancelled) {
 						setState({
 							status: 'ready',
 							users: result.data,
 							total: result.total,
+							page: result.page,
 						})
 					}
 				})
@@ -39,6 +49,7 @@ export function useAdminUsers(search: string, enabled: boolean) {
 							status: 'error',
 							users: prev.users,
 							total: prev.total,
+							page: prev.page,
 						}))
 					}
 				})
@@ -48,7 +59,7 @@ export function useAdminUsers(search: string, enabled: boolean) {
 			cancelled = true
 			window.clearTimeout(timeout)
 		}
-	}, [enabled, search])
+	}, [enabled, search, role, blocked, page, refreshKey])
 
 	return state
 }

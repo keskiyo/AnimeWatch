@@ -3,16 +3,13 @@ import { AnimePlayerFrame } from '@/features/animepage/components/player/AnimePl
 import { AnimePlayerMobileControls } from '@/features/animepage/components/player/AnimePlayerMobileControls'
 import { AnimePlayerOptionsDrawer } from '@/features/animepage/components/player/AnimePlayerOptionsDrawer'
 import { AnimePlayerSidebar } from '@/features/animepage/components/player/AnimePlayerSidebar'
-import { AnimePlayerStreamFrame } from '@/features/animepage/components/player/AnimePlayerStreamFrame'
-import { useAnimegoPlayer } from '@/features/animepage/hooks/useAnimegoPlayer'
 import { useAnimePlayerState } from '@/features/animepage/hooks/useAnimePlayerState'
 import { useFormattedDate } from '@/features/catalog/hooks/useFormattedDate'
 import type { AnimePlayerProps } from '@/types/animePage'
 import { formatPlayerAgeRating } from '@/utils/animePageLabels'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 export function AnimePlayer({
-	animeId,
 	title,
 	background,
 	tracks,
@@ -30,10 +27,6 @@ export function AnimePlayer({
 	const formattedDate = useFormattedDate({ activeEpisodeDate })
 	const displayRating = formatPlayerAgeRating(ageRating)
 	const [isOptionsOpen, setIsOptionsOpen] = useState(false)
-	// Episode count from the backup provider feeds the episode selector even
-	// when Kodik is down (set from the animego hook below, one render later)
-	const [animegoEpisodes, setAnimegoEpisodes] = useState(0)
-
 	const {
 		availableEpisodesCount,
 		activeEpisode,
@@ -49,44 +42,30 @@ export function AnimePlayer({
 		activeTrackId,
 		activeEpisodeTitle,
 		onTrackChange,
-		extraEpisodesCount: animegoEpisodes,
 	})
-
+	const activeTrack = visibleTracks.find(track => track.id === activeTrackId)
 	const activeProvider = effectiveProviders.find(
 		provider => provider.id === activeProviderId,
 	)
-	const isAnimego = activeProvider?.id === 'animego'
-
-	const animego = useAnimegoPlayer(animeId, activeEpisode ?? 1, isAnimego)
-	useEffect(() => {
-		if (animego.episodesCount > 0) setAnimegoEpisodes(animego.episodesCount)
-	}, [animego.episodesCount])
-
-	// The sidebar shows the tracks of whichever provider is active
-	const shownTracks = isAnimego ? animego.tracks : visibleTracks
-	const shownTrackId = isAnimego ? animego.activeVoiceId : activeTrackId
-	const onShownTrackChange = isAnimego ? animego.selectVoice : onTrackChange
-	const activeTrack = shownTracks.find(track => track.id === shownTrackId)
 	const normalizedActiveEpisode = activeEpisode ?? episodes[0]?.number ?? 1
-
 	const sidebarProps = useMemo(
 		() => ({
-			tracks: shownTracks,
+			tracks: visibleTracks,
 			providers: effectiveProviders,
 			hasEpisodes: availableEpisodesCount > 0,
-			activeTrackId: shownTrackId,
+			activeTrackId,
 			activeProviderId,
-			onTrackChange: onShownTrackChange,
+			onTrackChange,
 			onProviderChange,
 		}),
 		[
 			activeProviderId,
-			shownTrackId,
+			activeTrackId,
 			availableEpisodesCount,
 			effectiveProviders,
 			onProviderChange,
-			onShownTrackChange,
-			shownTracks,
+			onTrackChange,
+			visibleTracks,
 		],
 	)
 
@@ -105,22 +84,14 @@ export function AnimePlayer({
 
 			<div className='grid grid-cols-[minmax(0,1fr)_260px] gap-4 max-[900px]:grid-cols-1'>
 				<div>
-					{isAnimego ? (
-						<AnimePlayerStreamFrame
-							stream={animego.stream}
-							isLoading={animego.isLoading}
-							title={title}
-						/>
-					) : (
-						<AnimePlayerFrame
-							title={title}
-							background={background}
-							player={player}
-							linkOverride={playerSrc}
-							availableEpisodesCount={availableEpisodesCount}
-							nextEpisodeDate={formattedDate}
-						/>
-					)}
+					<AnimePlayerFrame
+						title={title}
+						background={background}
+						player={player}
+						linkOverride={playerSrc}
+						availableEpisodesCount={availableEpisodesCount}
+						nextEpisodeDate={formattedDate}
+					/>
 					<div className='max-[760px]:hidden'>
 						<AnimePlayerEpisodes
 							episodes={episodes}
@@ -141,7 +112,7 @@ export function AnimePlayer({
 						/>
 					</div>
 					<div className='mt-4 grid gap-3 text-sm text-aw-text'>
-						{availableEpisodesCount > 0 && !isAnimego && (
+						{availableEpisodesCount > 0 && (
 							<p className='m-0 text-aw-subtle'>
 								Название: {currentEpisodeTitle}
 							</p>

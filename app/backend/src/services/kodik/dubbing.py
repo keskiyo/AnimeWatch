@@ -39,5 +39,5 @@ async def get_dubbing_shikimori_ids(
                 ids.append(shiki_id)
         return ids
     except Exception as exc:
-        log.error("kodik dubbing translation_id=%d: %s", translation_id, exc)
+        log.error("[kodik] dubbing translation_id=%d: %s", translation_id, exc)
         return []

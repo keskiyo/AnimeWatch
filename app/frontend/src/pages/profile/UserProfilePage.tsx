@@ -40,7 +40,11 @@ export function UserProfilePage() {
 			setState(
 				profile ? { status: 'ready', profile } : { status: 'not-found' },
 			)
-			if (profile) setPageMeta(`${profile.name} — профиль на AnimeWatch`)
+			if (profile)
+				setPageMeta({
+					title: `${profile.name} — профиль на AnimeWatch`,
+					noindex: true,
+				})
 		})
 
 		return () => {

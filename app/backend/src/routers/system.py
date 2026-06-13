@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, Response
 
 from src.config import get_settings
-from src.db.users import ensure_users_schema, get_user_by_id
+from src.db.users import get_user_by_id
 from src.logger import get_logger
 from src.services.avatars import avatar_path
 
@@ -32,7 +32,6 @@ def health() -> dict:
 def public_user_profile(user_id: int) -> dict:
     """Public profile (no email): name, avatar, role, registration date."""
     env = get_settings()
-    ensure_users_schema(env.database_path)
     user = get_user_by_id(env.database_path, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
@@ -68,7 +67,9 @@ async def image_proxy(url: str) -> Response:
 
     env = get_settings()
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+        # follow_redirects=False: the host allow-list is checked on the initial
+        # URL only, so a redirect could escape it (SSRF). Refuse redirects.
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=False) as client:
             resp = await client.get(
                 url,
                 headers={
@@ -77,7 +78,11 @@ async def image_proxy(url: str) -> Response:
                     "Accept": "image/avif,image/webp,image/*,*/*",
                 },
             )
+            if resp.is_redirect:
+                raise HTTPException(status_code=502, detail="Image redirect refused")
             resp.raise_for_status()
+    except HTTPException:
+        raise
     except Exception as exc:
         log.warning("image-proxy %s: %s", url, exc)
         raise HTTPException(status_code=502, detail="Image fetch failed") from exc

@@ -1,7 +1,8 @@
 """User library routes: watchlist, progress, settings, notifications."""
 
-from fastapi import APIRouter, Body, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 
+from src.schemas.requests import ProgressRequest, SettingsRequest, WatchlistToggleRequest
 from src.services.auth import AuthError, get_current_user
 from src.services.library import (
     get_app_settings,
@@ -49,19 +50,16 @@ async def public_user_watchlist(user_id: int) -> list[dict]:
 
 @router.post("/watchlist/toggle")
 async def watchlist_toggle(
-    body: dict = Body(...),
+    body: WatchlistToggleRequest,
     authorization: str | None = Header(default=None),
 ) -> dict:
     user = _current_user(authorization)
-    try:
-        return await toggle_user_watchlist_status(user["id"], body)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return await toggle_user_watchlist_status(user["id"], body.model_dump())
 
 
 @router.post("/watchlist")
 async def watchlist_upsert(
-    body: dict = Body(...),
+    body: WatchlistToggleRequest,
     authorization: str | None = Header(default=None),
 ) -> dict:
     return await watchlist_toggle(body, authorization)
@@ -82,11 +80,8 @@ def progress_for_anime(anime_id: int) -> list[dict]:
 
 
 @router.post("/progress")
-def progress_upsert(body: dict = Body(...)) -> dict:
-    try:
-        return upsert_progress(body)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+def progress_upsert(body: ProgressRequest) -> dict:
+    return upsert_progress(body.model_dump())
 
 
 @router.get("/settings")
@@ -95,8 +90,9 @@ def current_settings() -> dict:
 
 
 @router.put("/settings")
-def settings_update(body: dict = Body(default_factory=dict)) -> dict:
-    return {"success": True, "settings": merge_settings(body)}
+def settings_update(body: SettingsRequest | None = None) -> dict:
+    data = body.model_dump(exclude_unset=True) if body else {}
+    return {"success": True, "settings": merge_settings(data)}
 
 
 @router.get("/notifications")

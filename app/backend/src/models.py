@@ -3,7 +3,7 @@ from typing import Literal, TypedDict
 AnimeType = Literal["tv", "ova", "movie", "ona", "special"]
 AnimeStatus = Literal["ongoing", "released", "announced"]
 AnimeSeason = Literal["winter", "spring", "summer", "fall"]
-PlayerName = Literal["kodik", "aniboom"]
+PlayerName = Literal["kodik"]
 WatchlistStatus = Literal["watching", "planned", "completed", "dropped"]
 
 

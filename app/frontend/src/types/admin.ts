@@ -1,3 +1,5 @@
+import type { StaticPage } from '@/types/staticPage'
+
 export type AdminUser = {
 	id: number
 	name: string
@@ -5,6 +7,9 @@ export type AdminUser = {
 	avatar_url: string
 	role: 'user' | 'admin'
 	created_at: string
+	is_blocked: number
+	blocked_at: string
+	last_seen_at: string
 }
 
 export type AdminUsersResult = {
@@ -26,4 +31,12 @@ export type AdminAuditLog = {
 
 export type AdminAuditResult = {
 	data: AdminAuditLog[]
+	total: number
+	page: number
+}
+
+export type AdminStaticPage = StaticPage
+
+export type AdminStaticPagesResult = {
+	data: AdminStaticPage[]
 }

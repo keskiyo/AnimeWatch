@@ -58,7 +58,7 @@ async def get_kodik_player(
             player["translations"] = extract_translations(results)
         return player
     except Exception as exc:
-        log.error("kodik anime_id=%d: %s", anime_id, exc)
+        log.error("[kodik] anime_id=%d: %s", anime_id, exc)
         return unavailable_player("Kodik is temporarily unavailable")
 
 
@@ -80,5 +80,5 @@ async def get_kodik_search_results(
             item for item in (response.get("results") or []) if isinstance(item, dict)
         ]
     except Exception as exc:
-        log.error("kodik search anime_id=%d: %s", anime_id, exc)
+        log.error("[kodik] search anime_id=%d: %s", anime_id, exc)
         return []

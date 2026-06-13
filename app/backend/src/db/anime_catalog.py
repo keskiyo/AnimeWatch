@@ -13,7 +13,10 @@ import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
+from src.logger import get_logger
 from src.models import Anime
+
+log = get_logger(__name__)
 
 _connections: dict[tuple[str, int], sqlite3.Connection] = {}
 
@@ -94,13 +97,18 @@ def connect(database_path: str) -> sqlite3.Connection:
     if key not in _connections:
         if database_path != ":memory:":
             Path(database_path).resolve().parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(database_path)
+        conn = sqlite3.connect(database_path, timeout=5)
+        conn.execute("PRAGMA busy_timeout = 5000")
+        conn.execute("PRAGMA foreign_keys = ON")
+        if database_path != ":memory:":
+            conn.execute("PRAGMA journal_mode = WAL")
         conn.row_factory = sqlite3.Row
         _connections[key] = conn
     return _connections[key]
 
 
-# Detail-page fields persisted on first visit (lightweight migrations)
+# Detail-page fields persisted on first visit (lightweight migrations).
+# has_kodik: NULL = unchecked, 1 = has Kodik dubbing, 0 = confirmed none.
 _DETAIL_COLUMNS = [
     ("source", "TEXT NOT NULL DEFAULT ''"),
     ("screenshots_json", "TEXT NOT NULL DEFAULT '[]'"),
@@ -108,6 +116,8 @@ _DETAIL_COLUMNS = [
     ("authors_json", "TEXT NOT NULL DEFAULT '[]'"),
     ("characters_json", "TEXT NOT NULL DEFAULT '[]'"),
     ("detailed_at", "TEXT NOT NULL DEFAULT ''"),
+    ("has_kodik", "INTEGER DEFAULT NULL"),
+    ("has_kodik_checked_at", "TEXT NOT NULL DEFAULT ''"),
 ]
 
 
@@ -119,8 +129,15 @@ def ensure_anime_catalog_schema(database_path: str) -> None:
     for column, definition in _DETAIL_COLUMNS:
         try:
             conn.execute(f"ALTER TABLE anime_catalog ADD COLUMN {column} {definition}")
-        except Exception:
-            pass  # column already exists
+            log.info("[catalog] migrated: added column %s", column)
+        except sqlite3.OperationalError as exc:
+            if "duplicate column" not in str(exc).lower():
+                raise  # unexpected migration failure — don't silence it
+    # Index created after the migration above (column may not exist yet on fresh DB)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_anime_catalog_has_kodik "
+        "ON anime_catalog(has_kodik)"
+    )
     conn.commit()
 
 
@@ -143,6 +160,46 @@ def upsert_anime_catalog_many(database_path: str, items: list[Anime]) -> int:
     conn.executemany(_UPSERT_SQL, rows)
     conn.commit()
     return len(rows)
+
+
+def mark_kodik_availability(database_path: str, kodik_ids: set[int]) -> dict:
+    """Set has_kodik for the WHOLE catalog from a complete Kodik id set.
+
+    ids present in Kodik → has_kodik=1, everyone else → 0. Touches only the
+    has_kodik columns (never other catalog fields), deletes no rows. Runs in a
+    single transaction so the flag is always consistent. Caller must pass a
+    COMPLETE set (a partial crawl would wrongly hide titles)."""
+    ensure_anime_catalog_schema(database_path)
+    conn = connect(database_path)
+    now = datetime.now(tz=UTC).isoformat()
+    try:
+        conn.execute("CREATE TEMP TABLE IF NOT EXISTS _kodik_ids (id INTEGER PRIMARY KEY)")
+        conn.execute("DELETE FROM _kodik_ids")
+        conn.executemany(
+            "INSERT OR IGNORE INTO _kodik_ids (id) VALUES (?)",
+            [(int(i),) for i in kodik_ids],
+        )
+        conn.execute(
+            """
+            UPDATE anime_catalog SET
+                has_kodik = CASE
+                    WHEN id IN (SELECT id FROM _kodik_ids) THEN 1 ELSE 0
+                END,
+                has_kodik_checked_at = ?
+            """,
+            (now,),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    with_kodik = conn.execute(
+        "SELECT COUNT(*) FROM anime_catalog WHERE has_kodik = 1"
+    ).fetchone()[0]
+    without = conn.execute(
+        "SELECT COUNT(*) FROM anime_catalog WHERE has_kodik = 0"
+    ).fetchone()[0]
+    return {"with": int(with_kodik), "without": int(without)}
 
 
 # ── Row mapping ───────────────────────────────────────────────────────────────

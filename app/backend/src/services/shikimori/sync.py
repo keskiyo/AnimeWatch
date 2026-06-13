@@ -129,6 +129,8 @@ async def sync_shikimori_catalog_full(
         set_sync_state(env.database_path, "shikimori_full_sync_status", "completed")
         log.info("[sync-full] completed total_saved=%d", items_saved)
 
+        await _refresh_kodik_flags(env)
+
         return {
             "status": "completed",
             "from_year": from_year,
@@ -202,6 +204,8 @@ async def sync_shikimori_catalog_recent(
         set_sync_state(env.database_path, "shikimori_recent_sync_status", "completed")
         log.info("[sync-recent] completed total_saved=%d", items_saved)
 
+        await _refresh_kodik_flags(env)
+
         return {
             "status": "completed",
             "from_year": from_year,
@@ -210,6 +214,16 @@ async def sync_shikimori_catalog_recent(
             "started_at": started_at,
             "completed_at": completed_at,
         }
+
+
+async def _refresh_kodik_flags(env: Settings) -> None:
+    """Recompute has_kodik flags after the catalog changed. Never fails the sync."""
+    try:
+        from src.services.kodik.availability import refresh_kodik_availability
+
+        await refresh_kodik_availability(env)
+    except Exception as exc:  # pragma: no cover - defensive
+        log.warning("[sync] kodik availability refresh skipped: %s", exc)
 
 
 async def _fetch_and_save(ids: list[int], env: Settings) -> int:

@@ -1,12 +1,29 @@
 """Kodik HTTP transport: search/list fetchers, cache, URL validation."""
 
+import asyncio
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 import httpx
 from anime_parsers_ru.parser_kodik_async import KodikParserAsync
 
 from src.config import Settings
 from src.db.cache import CacheStore
+from src.services.shikimori.rate_limit import Throttle
+
+# Be polite to Kodik during the full catalog crawl (~5 rps)
+_list_throttle = Throttle(0.2)
+
+
+def _next_token(next_page: Any) -> str | None:
+    """Kodik returns `next_page` as a full URL; the usable `next` value is its
+    query param. Passing the whole URL back as `next` yields a 500 (bad token)."""
+    if not isinstance(next_page, str) or not next_page:
+        return None
+    if next_page.startswith("http"):
+        values = parse_qs(urlparse(next_page).query).get("next")
+        return values[0] if values else None
+    return next_page
 
 ALLOWED_PLAYER_HOSTS = {
     "kodik.info",
@@ -89,10 +106,68 @@ async def fetch_kodik_by_translation(translation_id: int, settings: Settings) ->
             results.extend(
                 item for item in body.get("results") or [] if isinstance(item, dict)
             )
-            next_page = body.get("next_page")
+            next_page = _next_token(body.get("next_page"))
             if not next_page:
                 break
     return {"results": results}
+
+
+async def iter_kodik_shikimori_ids(settings: Settings) -> set[int]:
+    """Every shikimori_id that has a Kodik dubbing (full paginated /list crawl).
+
+    Raises on HTTP error — a partial crawl must NOT be treated as complete,
+    otherwise titles we simply didn't reach would be marked as "no dubbing"."""
+    ids: set[int] = set()
+    next_page: str | None = None
+    async with httpx.AsyncClient(timeout=20) as client:
+        for _ in range(2000):  # safety bound (~200k titles at 100/page)
+            await _list_throttle.wait()
+            data: dict[str, str] = {
+                "token": settings.kodik_api_key or "",
+                "types": "anime,anime-serial",
+                "limit": "100",
+            }
+            if next_page:
+                data["next"] = next_page
+            body = await _post_list_with_retry(client, settings.kodik_endpoint, data)
+            for item in body.get("results") or []:
+                if not isinstance(item, dict):
+                    continue
+                sid = item.get("shikimori_id")
+                try:
+                    if sid not in (None, ""):
+                        ids.add(int(sid))
+                except (TypeError, ValueError):
+                    continue
+            next_page = _next_token(body.get("next_page"))
+            if not next_page:
+                break
+    return ids
+
+
+async def _post_list_with_retry(
+    client: httpx.AsyncClient, endpoint: str, data: dict[str, str]
+) -> dict:
+    """POST /list, retrying transient 5xx a few times (one blip must not abort
+    a multi-hundred-page crawl). Raises if it still fails."""
+    last: Exception | None = None
+    for attempt in range(3):
+        try:
+            response = await client.post(
+                f"{endpoint}/list", data=data, headers={"Accept": "application/json"}
+            )
+            if response.status_code >= 500 and attempt < 2:
+                await asyncio.sleep(0.5 * (attempt + 1))
+                continue
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as exc:
+            last = exc
+            if attempt < 2:
+                await asyncio.sleep(0.5 * (attempt + 1))
+                continue
+            raise
+    raise last or RuntimeError("kodik /list failed")
 
 
 def absolute_link(value: Any) -> Any:
