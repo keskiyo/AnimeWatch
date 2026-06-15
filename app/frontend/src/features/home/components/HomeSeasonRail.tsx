@@ -42,7 +42,7 @@ export function HomeSeasonRail({ anime, isLoading }: HomeSeasonRailProps) {
 				{isLoading ? (
 					<HomeSeasonRailSkeleton />
 				) : (
-					anime.map(item => {
+					anime.map((item, index) => {
 						const title = item.title_ru || item.title_en
 
 						return (
@@ -61,6 +61,8 @@ export function HomeSeasonRail({ anime, isLoading }: HomeSeasonRailProps) {
 									<PosterImage
 										url={item.poster_url}
 										title={title}
+										loading={index === 0 ? 'eager' : 'lazy'}
+										fetchPriority={index === 0 ? 'high' : 'auto'}
 										maxRetries={5}
 										retryDelay={2000}
 									/>

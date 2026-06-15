@@ -40,3 +40,21 @@ export type AdminStaticPage = StaticPage
 export type AdminStaticPagesResult = {
 	data: AdminStaticPage[]
 }
+
+export type AdminComment = {
+	id: number
+	anime_id: number
+	parent_id: number | null
+	user_id: number
+	username: string
+	user_avatar: string
+	anime_title: string
+	text: string
+	created_at: string
+}
+
+export type AdminCommentsResult = {
+	data: AdminComment[]
+	total: number
+	page: number
+}

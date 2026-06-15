@@ -10,8 +10,9 @@ from src.services.content import (
     get_studio_anime_availability,
     get_studios,
 )
-from src.services.schedule import get_schedule
+from src.services.home import get_home_season
 from src.services.kodik import get_kodik_player
+from src.services.schedule import get_schedule
 
 log = get_logger(__name__)
 
@@ -33,6 +34,17 @@ async def schedule(
         log.error("/api/schedule error: %s", exc)
         raise HTTPException(
             status_code=503, detail="Schedule temporarily unavailable"
+        ) from exc
+
+
+@router.get("/home/season")
+async def home_season(limit: Annotated[int, Query(ge=1, le=30)] = 15) -> list[dict]:
+    try:
+        return await get_home_season(limit)
+    except Exception as exc:
+        log.error("/api/home/season error: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Home season temporarily unavailable"
         ) from exc
 
 

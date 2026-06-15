@@ -94,16 +94,23 @@ def update_comment(database_path: str, comment_id: int, text: str) -> None:
 
 
 def delete_comment(database_path: str, comment_id: int) -> None:
+    """Delete a comment and its WHOLE reply subtree (any depth) + their votes."""
     conn = connect(database_path)
-    # Replies and votes go with the comment
+    subtree = """
+        WITH RECURSIVE sub(id) AS (
+            SELECT ?
+            UNION ALL
+            SELECT c.id FROM comments c JOIN sub ON c.parent_id = sub.id
+        )
+    """
     conn.execute(
-        "DELETE FROM comment_votes WHERE comment_id IN "
-        "(SELECT id FROM comments WHERE id = ? OR parent_id = ?)",
-        (comment_id, comment_id),
+        f"{subtree} DELETE FROM comment_votes "
+        "WHERE comment_id IN (SELECT id FROM sub)",
+        (comment_id,),
     )
     conn.execute(
-        "DELETE FROM comments WHERE id = ? OR parent_id = ?",
-        (comment_id, comment_id),
+        f"{subtree} DELETE FROM comments WHERE id IN (SELECT id FROM sub)",
+        (comment_id,),
     )
     conn.commit()
 

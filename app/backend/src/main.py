@@ -17,6 +17,7 @@ from src.db.sync_state import ensure_sync_state_schema
 from src.db.users import ensure_users_schema
 from src.db.watchlist import ensure_watchlist_schema
 from src.routers.admin_audit import router as admin_audit_router
+from src.routers.admin_comments import router as admin_comments_router
 from src.routers.admin_sync import router as admin_sync_router
 from src.routers.admin_static_pages import router as admin_static_pages_router
 from src.routers.admin_user_actions import router as admin_user_actions_router
@@ -59,6 +60,7 @@ app.include_router(auth_router)
 app.include_router(comments_router)
 app.include_router(static_pages_router)
 app.include_router(admin_audit_router)
+app.include_router(admin_comments_router)
 app.include_router(admin_static_pages_router)
 app.include_router(admin_user_actions_router)
 app.include_router(admin_users_router)

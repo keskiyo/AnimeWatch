@@ -8,4 +8,4 @@ Disallow: /profile
 # Query-string URLs are filter/sort variants of canonical pages — don't crawl
 Disallow: /*?
 
-Sitemap: /sitemap.xml
+Sitemap: http://localhost:4173/sitemap.xml

@@ -1,5 +1,5 @@
 import { resolveAvatarUrl } from '@/api/authApi'
-import { AdminUserActions } from '@/features/admin/components/AdminUserActions'
+import { AdminUserActions } from '@/features/admin/components/users/AdminUserActions'
 import type { AdminUser } from '@/types/admin'
 
 type AdminUsersTableProps = {

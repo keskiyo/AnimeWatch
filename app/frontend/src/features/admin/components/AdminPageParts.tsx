@@ -1,9 +1,10 @@
-import type { AdminUser } from '@/types/admin'
+import type { AdminComment, AdminUser } from '@/types/admin'
 import { ShieldCheck } from 'lucide-react'
 
 export type PendingAdminAction =
 	| { type: 'role'; user: AdminUser }
 	| { type: 'block'; user: AdminUser }
+	| { type: 'delete_comment'; comment: AdminComment }
 	| null
 
 export function AdminHeader({ totalUsers }: { totalUsers: number }) {
@@ -30,6 +31,13 @@ export function AdminHeader({ totalUsers }: { totalUsers: number }) {
 }
 
 export function confirmDialogProps(action: Exclude<PendingAdminAction, null>) {
+	if (action.type === 'delete_comment') {
+		return {
+			title: 'Удалить комментарий',
+			message: `Удалить комментарий ${action.comment.username} (и все ответы на него)?`,
+			confirmLabel: 'Удалить',
+		}
+	}
 	const { user } = action
 	if (action.type === 'role') {
 		const toRole = user.role === 'admin' ? 'user' : 'admin'

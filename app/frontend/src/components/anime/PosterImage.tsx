@@ -7,6 +7,8 @@ type PosterImageProps = {
 	className?: string
 	placeholderClassName?: string
 	loading?: 'lazy' | 'eager'
+	fetchPriority?: 'high' | 'low' | 'auto'
+	proxyWidth?: number
 	onClick?: () => void
 	maxRetries?: number
 	retryDelay?: number
@@ -18,6 +20,8 @@ export function PosterImage({
 	className = 'h-full w-full object-cover',
 	placeholderClassName = 'flex h-full w-full items-center justify-center text-[clamp(20px,4vw,38px)] font-black text-white/60',
 	loading = 'lazy',
+	fetchPriority = 'auto',
+	proxyWidth = 360,
 	onClick,
 	maxRetries = 5,
 	retryDelay = 2000,
@@ -48,8 +52,8 @@ export function PosterImage({
 		if (!url) return null
 		const urlWithRetry = addRetryParam(url, retry)
 
-		return proxyImage(urlWithRetry)
-	}, [url, retry])
+		return proxyImage(urlWithRetry, { width: proxyWidth })
+	}, [proxyWidth, url, retry])
 
 	function handleError() {
 		if (retry < maxRetries) {
@@ -81,6 +85,8 @@ export function PosterImage({
 			src={src}
 			alt={`${title} постер`}
 			loading={loading}
+			fetchPriority={fetchPriority}
+			decoding='async'
 			onError={handleError}
 			onLoad={() => setIsBroken(false)}
 			onClick={onClick}

@@ -54,6 +54,7 @@ HTTP-слой. Роутеры должны быть тонкими и делег
 - `admin_user_actions.py` — действия над пользователем (роль, бан, сброс пароля).
 - `admin_static_pages.py` — CRUD статических страниц (CMS).
 - `admin_audit.py` — журнал admin-действий.
+- `admin_comments.py` — модерация комментариев (список + удаление подветки).
 - `admin_sync.py` — ручной sync/admin операции.
 - `internal_catalog.py` — внутренний cron endpoint `/internal/catalog/refresh`.
 
@@ -75,7 +76,8 @@ HTTP-слой. Роутеры должны быть тонкими и делег
 - `users.py` — users/sessions/password hashes.
 - `admin_users.py` — admin-запросы по пользователям (список, роль, бан).
 - `admin_audit.py` — таблица журнала admin-действий.
-- `comments.py` — comments/votes/replies.
+- `comments.py` — comments/votes/replies (`parent_id` дерево, рекурсивное
+  удаление подветки); `admin_comments.py` — список с автором/аниме для модерации.
 - `static_pages.py` — таблица статических страниц (CMS).
 - `library.py`, `watchlist.py` — watchlist storage.
 

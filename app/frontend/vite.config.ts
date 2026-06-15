@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
+const backendTarget = process.env.VITE_BACKEND_URL ?? 'http://localhost:3001'
 
 export default defineConfig({
 	plugins: [react(), tailwindcss()],
@@ -12,10 +13,16 @@ export default defineConfig({
 		host: 'localhost',
 		port: 5173,
 		strictPort: true,
+		proxy: {
+			'/sitemap.xml': backendTarget,
+		},
 	},
 	preview: {
 		host: 'localhost',
 		port: 4173,
+		proxy: {
+			'/sitemap.xml': backendTarget,
+		},
 	},
 	resolve: {
 		alias: {

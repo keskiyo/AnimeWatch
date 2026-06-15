@@ -1,13 +1,14 @@
 import {
+	deleteAdminComment,
 	resetAdminUserPassword,
 	updateAdminStaticPage,
 	updateAdminUserBlocked,
 	updateAdminUserRole,
 } from '@/api/adminApi'
-import { AdminAuditPanel } from '@/features/admin/components/AdminAuditPanel'
-import { AdminCommentsPlaceholder } from '@/features/admin/components/AdminCommentsPlaceholder'
+import { AdminAuditPanel } from '@/features/admin/components/audit/AdminAuditPanel'
+import { AdminCommentsPanel } from '@/features/admin/components/comments/AdminCommentsPanel'
 import { AdminConfirmDialog } from '@/features/admin/components/AdminConfirmDialog'
-import { AdminPagesPanel } from '@/features/admin/components/AdminPagesPanel'
+import { AdminPagesPanel } from '@/features/admin/components/pages/AdminPagesPanel'
 import { AdminPagination } from '@/features/admin/components/AdminPagination'
 import {
 	AdminHeader,
@@ -15,10 +16,11 @@ import {
 	confirmDialogProps,
 	type PendingAdminAction,
 } from '@/features/admin/components/AdminPageParts'
-import { AdminPasswordResetModal } from '@/features/admin/components/AdminPasswordResetModal'
+import { AdminPasswordResetModal } from '@/features/admin/components/users/AdminPasswordResetModal'
 import { AdminTabs, type AdminTab } from '@/features/admin/components/AdminTabs'
-import { AdminUsersPanel } from '@/features/admin/components/AdminUsersPanel'
+import { AdminUsersPanel } from '@/features/admin/components/users/AdminUsersPanel'
 import { useAdminAudit } from '@/features/admin/hooks/useAdminAudit'
+import { useAdminComments } from '@/features/admin/hooks/useAdminComments'
 import { useAdminStaticPages } from '@/features/admin/hooks/useAdminStaticPages'
 import { useAdminUsers } from '@/features/admin/hooks/useAdminUsers'
 import { useAuthUser } from '@/features/auth/useAuthUser'
@@ -39,6 +41,7 @@ export function AdminPage() {
 	const [blocked, setBlocked] = useState<'' | '0' | '1'>('')
 	const [usersPage, setUsersPage] = useState(1)
 	const [auditPage, setAuditPage] = useState(1)
+	const [commentsPage, setCommentsPage] = useState(1)
 	const [resetUser, setResetUser] = useState<AdminUser | null>(null)
 	const [pendingAction, setPendingAction] = useState<PendingAdminAction>(null)
 	const [isSubmitting, setIsSubmitting] = useState(false)
@@ -48,6 +51,7 @@ export function AdminPage() {
 	const users = useAdminUsers(search, role, blocked, usersPage, enabled, refreshKey)
 	const audit = useAdminAudit(enabled, auditPage, refreshKey)
 	const pages = useAdminStaticPages(enabled, refreshKey)
+	const comments = useAdminComments(enabled, commentsPage, refreshKey)
 	const changeSearch = (value: string) => withUsersPageReset(() => setSearch(value))
 	const changeRole = (value: typeof role) => withUsersPageReset(() => setRole(value))
 	const changeBlocked = (value: typeof blocked) => withUsersPageReset(() => setBlocked(value))
@@ -97,7 +101,18 @@ export function AdminPage() {
 						<AdminPagination page={audit.page} total={audit.total} limit={20} onPageChange={setAuditPage} />
 					</>
 				)}
-				{tab === 'comments' && <AdminCommentsPlaceholder />}
+				{tab === 'comments' && (
+					<AdminCommentsPanel
+						comments={comments.comments}
+						page={comments.page}
+						total={comments.total}
+						status={comments.status}
+						onPageChange={setCommentsPage}
+						onDelete={selected =>
+							setPendingAction({ type: 'delete_comment', comment: selected })
+						}
+					/>
+				)}
 			</section>
 			{resetUser && <AdminPasswordResetModal user={resetUser} isSubmitting={isSubmitting} onClose={() => setResetUser(null)} onSubmit={handleResetPassword} />}
 			{pendingAction && <AdminConfirmDialog {...confirmDialogProps(pendingAction)} isSubmitting={isSubmitting} onClose={() => setPendingAction(null)} onConfirm={handleConfirmAction} />}
@@ -119,9 +134,16 @@ export function AdminPage() {
 	}
 	async function handleConfirmAction() {
 		if (!pendingAction) return
+		const action = pendingAction
 		await submitAction(async () => {
-			const { user: target } = pendingAction
-			if (pendingAction.type === 'role') {
+			if (action.type === 'delete_comment') {
+				await deleteAdminComment(action.comment.id)
+				setPendingAction(null)
+				notifySuccess('Комментарий удалён')
+				return
+			}
+			const target = action.user
+			if (action.type === 'role') {
 				await updateAdminUserRole(target.id, target.role === 'admin' ? 'user' : 'admin')
 			} else {
 				await updateAdminUserBlocked(target.id, !target.is_blocked)

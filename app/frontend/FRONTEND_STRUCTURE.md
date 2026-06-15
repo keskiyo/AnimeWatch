@@ -85,7 +85,8 @@
 - `components/hero/*` — poster/actions/info panel/hero.
 - `components/player/*` — Kodik iframe frame, episodes, sidebar, placeholder.
 - `components/frames/*` — screenshots и lightbox.
-- `components/comments/*` — reviews/comments UI.
+- `components/comments/*` — reviews/comments UI; `CommentThread.tsx`
+  рекурсивно рендерит дерево ответов (сворачивание, «Ещё N ответов»).
 - `components/AnimeRelated.tsx` — related block.
 - `hooks/useAnimePlayerState.ts`, `useEpisodePages.ts`, `useAnimeComments.ts`.
 
@@ -112,6 +113,8 @@
 - `components/AdminPagesPanel.tsx`, `AdminPageParts.tsx` — CMS статических
   страниц.
 - `components/AdminAuditPanel.tsx` — журнал admin-действий.
+- `components/AdminCommentsPanel.tsx` + `AdminCommentsTable.tsx` — модерация
+  комментариев (список + удаление); `hooks/useAdminComments.ts`.
 - `components/AdminConfirmDialog.tsx`, `AdminPagination.tsx`,
   `AdminCommentsPlaceholder.tsx` — общие части админки.
 - `hooks/useAdminUsers.ts`, `useAdminAudit.ts`, `useAdminStaticPages.ts`.

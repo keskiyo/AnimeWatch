@@ -1,5 +1,5 @@
-import { CommentCard } from '@/features/animepage/components/comments/CommentCard'
 import { CommentEditor } from '@/features/animepage/components/comments/CommentEditor'
+import { CommentThread } from '@/features/animepage/components/comments/CommentThread'
 import { CommentsSkeleton } from '@/features/animepage/components/comments/CommentsSkeleton'
 import { useAnimeComments } from '@/features/animepage/hooks/useAnimeComments'
 import { useEffect, useState } from 'react'
@@ -40,27 +40,15 @@ export function ReviewsAnimePage({ animeId }: ReviewsAnimePageProps) {
 					</p>
 				) : (
 					visibleComments.map(comment => (
-						<CommentCard
+						<CommentThread
 							key={comment.id}
 							comment={comment}
+							repliesByParent={commentsState.repliesByParent}
+							depth={0}
 							onDelete={commentsState.onDelete}
 							onEdit={commentsState.onEdit}
 							onReply={commentsState.onReply}
-						>
-							{(
-								commentsState.repliesByParent.get(comment.id) ??
-								[]
-							).map(reply => (
-								<div key={reply.id} className='mt-5'>
-									<CommentCard
-										comment={reply}
-										onDelete={commentsState.onDelete}
-										onEdit={commentsState.onEdit}
-										onReply={commentsState.onReply}
-									/>
-								</div>
-							))}
-						</CommentCard>
+						/>
 					))
 				)}
 			</div>

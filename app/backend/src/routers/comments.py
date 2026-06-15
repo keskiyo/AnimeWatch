@@ -65,8 +65,7 @@ def create_comment(
         parent = get_comment(db, parent_id)
         if not parent or parent["anime_id"] != anime_id:
             raise HTTPException(status_code=422, detail="Parent comment was not found")
-        if parent.get("parent_id"):
-            parent_id = parent["parent_id"]
+        # Keep the real parent at any depth — deep (Reddit-style) threading.
 
     comment_id = add_comment(db, anime_id, user["id"], body.text, parent_id)
     return {

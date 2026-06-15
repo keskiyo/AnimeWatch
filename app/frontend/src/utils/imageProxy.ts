@@ -6,22 +6,35 @@ const API_BASE_URL =
 	import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001/api'
 
 // shikimori.one — old domain, hotlink-protected; route via backend proxy
-// shikimori.io  — new CDN domain (GQL poster URLs), loads freely — NO proxy needed
-const PROXIED_HOSTS = ['shikimori.one', 'shikimori.org']
+// shikimori.io  — loads freely, but goes through proxy when resized posters are requested
+const PROXIED_HOSTS = ['shikimori.io', 'shikimori.one', 'shikimori.org']
+
+type ProxyImageOptions = {
+	width?: number
+}
 
 /**
  * Wrap a Shikimori image URL so it is fetched via the backend proxy.
  * Non-Shikimori URLs (e.g. Kodik screenshots) are returned unchanged.
  */
-export function proxyImage(url: string | undefined | null): string {
+export function proxyImage(
+	url: string | undefined | null,
+	options: ProxyImageOptions = {},
+): string {
 	if (!url) return ''
 	try {
 		const { host } = new URL(url)
 		const needsProxy = PROXIED_HOSTS.some(
 			h => host === h || host.endsWith(`.${h}`),
 		)
-		if (!needsProxy) return url
-		return `${API_BASE_URL}/image-proxy?url=${encodeURIComponent(url)}`
+		if (!needsProxy || (!options.width && host.includes('shikimori.io'))) {
+			return url
+		}
+
+		const proxiedUrl = new URL(`${API_BASE_URL}/image-proxy`)
+		proxiedUrl.searchParams.set('url', url)
+		if (options.width) proxiedUrl.searchParams.set('w', String(options.width))
+		return proxiedUrl.toString()
 	} catch {
 		return url
 	}

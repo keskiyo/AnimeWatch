@@ -1,5 +1,5 @@
 import { AdminPagination } from '@/features/admin/components/AdminPagination'
-import { AdminUsersTable } from '@/features/admin/components/AdminUsersTable'
+import { AdminUsersTable } from '@/features/admin/components/users/AdminUsersTable'
 import type { AdminUser } from '@/types/admin'
 
 type AdminUsersPanelProps = {

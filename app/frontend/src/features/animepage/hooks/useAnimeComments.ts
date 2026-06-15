@@ -5,6 +5,7 @@ import {
 	updateAnimeComment,
 } from '@/api/commentsApi'
 import type { AnimeComment } from '@/types/reviews'
+import { collectDescendantIds, groupRepliesByParent } from '@/utils/commentTree'
 import { useEffect, useMemo, useState } from 'react'
 
 export function useAnimeComments(animeId: number) {
@@ -32,17 +33,8 @@ export function useAnimeComments(animeId: number) {
 	}, [animeId])
 
 	const threads = useMemo(() => {
-		const topLevel: AnimeComment[] = []
-		const repliesByParent = new Map<number, AnimeComment[]>()
-		for (const comment of comments) {
-			if (comment.parent_id) {
-				const list = repliesByParent.get(comment.parent_id) ?? []
-				list.unshift(comment)
-				repliesByParent.set(comment.parent_id, list)
-			} else {
-				topLevel.push(comment)
-			}
-		}
+		const topLevel = comments.filter(c => !c.parent_id)
+		const repliesByParent = groupRepliesByParent(comments)
 		return { topLevel, repliesByParent }
 	}, [comments])
 
@@ -53,9 +45,14 @@ export function useAnimeComments(animeId: number) {
 
 	async function onDelete(commentId: number) {
 		await deleteAnimeComment(commentId)
-		setComments(prev =>
-			prev.filter(c => c.id !== commentId && c.parent_id !== commentId),
-		)
+		// Remove the whole subtree (matches the recursive delete on the server).
+		setComments(prev => {
+			const remove = collectDescendantIds(
+				groupRepliesByParent(prev),
+				commentId,
+			)
+			return prev.filter(c => !remove.has(c.id))
+		})
 	}
 
 	async function onEdit(commentId: number, text: string) {

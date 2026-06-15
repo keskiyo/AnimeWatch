@@ -2,6 +2,7 @@ import { apiClient } from '@/api/client'
 import { authHeaders } from '@/api/authApi'
 import type {
 	AdminAuditResult,
+	AdminCommentsResult,
 	AdminStaticPage,
 	AdminStaticPagesResult,
 	AdminUser,
@@ -74,6 +75,23 @@ export async function getAdminStaticPages(): Promise<AdminStaticPagesResult> {
 		headers: authHeaders(),
 	})
 	return response.data
+}
+
+export async function getAdminComments(
+	page = 1,
+	limit = 20,
+): Promise<AdminCommentsResult> {
+	const response = await apiClient.get<AdminCommentsResult>('/admin/comments', {
+		params: { page, limit },
+		headers: authHeaders(),
+	})
+	return response.data
+}
+
+export async function deleteAdminComment(commentId: number): Promise<void> {
+	await apiClient.delete(`/admin/comments/${commentId}`, {
+		headers: authHeaders(),
+	})
 }
 
 export async function updateAdminStaticPage(
