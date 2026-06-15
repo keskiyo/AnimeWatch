@@ -8,8 +8,9 @@ from src.models import Anime
 _STATUS_RANK_SQL = (
     "CASE status WHEN 'ongoing' THEN 0 WHEN 'released' THEN 1 ELSE 2 END"
 )
-# Hide titles confirmed to have no Kodik dubbing (see anime_catalog_queries)
-_KODIK_VISIBLE = "(has_kodik IS NULL OR has_kodik != 0)"
+# Hide titles confirmed to have no Kodik dubbing (see anime_catalog_queries).
+# Announced titles stay visible — dubbing appears only after release.
+_KODIK_VISIBLE = "(has_kodik IS NULL OR has_kodik != 0 OR status = 'announced')"
 _SEASON_MARKERS_RE = re.compile(
     r"\b(\d+(st|nd|rd|th)?\s*season|season\s*\d+|part\s*\d+)\b",
     re.IGNORECASE,

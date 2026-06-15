@@ -12,8 +12,9 @@ _STATUS_RANK_SQL = (
 
 # Hide titles confirmed to have no Kodik dubbing (has_kodik = 0). Unchecked
 # (NULL) and available (1) stay visible, so the catalog never empties out
-# before the first availability pass runs.
-_KODIK_VISIBLE = "(has_kodik IS NULL OR has_kodik != 0)"
+# before the first availability pass runs. Announced titles are always shown —
+# they have no dubbing yet (it appears after release).
+_KODIK_VISIBLE = "(has_kodik IS NULL OR has_kodik != 0 OR status = 'announced')"
 
 _SORTS: dict[str, str] = {
     "rating": "rating",

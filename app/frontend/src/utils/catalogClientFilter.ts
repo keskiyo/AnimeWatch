@@ -73,18 +73,29 @@ export function applyFilters(anime: Anime[], f: ClientFilters): Anime[] {
 	})
 }
 
-/** Client-side catalog sorting. Announced titles always go last. */
+/**
+ * Client-side catalog sorting. Announced (anons) titles are grouped apart from
+ * the rest. For the "новизне" sort they follow the direction (desc → upcoming
+ * on top, asc → at the bottom). For every other sort they always go LAST (their
+ * future years/ids would otherwise dominate the top).
+ */
 export function applySort(
 	anime: Anime[],
 	option: SortOption,
 	direction: SortDirection,
 ): Anime[] {
 	return [...anime].sort((a, b) => {
-		// Announced (anons) titles always go LAST — they have future years/ids
-		// and would otherwise dominate the top of every desc sort.
 		const aAnnounced = a.status === 'announced' ? 1 : 0
 		const bAnnounced = b.status === 'announced' ? 1 : 0
-		if (aAnnounced !== bAnnounced) return aAnnounced - bAnnounced
+		if (aAnnounced !== bAnnounced) {
+			if (option === 'новизне') {
+				// desc → announced first, asc → announced last
+				return direction === 'desc'
+					? bAnnounced - aAnnounced
+					: aAnnounced - bAnnounced
+			}
+			return aAnnounced - bAnnounced // other sorts: announced last
+		}
 
 		let cmp = 0
 
