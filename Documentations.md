@@ -106,6 +106,12 @@ Shikimori ──(sync, вручную/еженедельно)──▶ SQLite an
    работе сайта не дёргается. Пустая таблица → `{"data": [], "needs_sync": true}`.
 3. **Фронт** (`useAnimeCache`) грузит bulk один раз за сессию, дальше фильтры,
    сортировка и поиск работают на клиенте мгновенно.
+4. **Фильтр по озвучке Kodik.** В каталоге/поиске/рейле/студиях/sitemap
+   показываются ТОЛЬКО тайтлы с озвучкой Kodik. Это флаг `has_kodik` в
+   `anime_catalog` (`NULL` = не проверено → видно; `1` = есть → видно; `0` =
+   проверено, нет → скрыто). Прячется только `has_kodik = 0`. Прямая ссылка
+   `/api/animes/{id}` на скрытый тайтл всё равно работает (watchlist/старые
+   ссылки не ломаются). Флаг проставляет проход по Kodik `/list` (см. ниже).
 
 ### Синхронизация
 
@@ -113,15 +119,18 @@ Shikimori ──(sync, вручную/еженедельно)──▶ SQLite an
 | ---------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
 | **Full**   | Все аниме 1990 → сегодня: по годам, по сезонам (REST ids → GQL детали пачками по 50) | `python -m src.scripts.sync_shikimori full` или `POST /admin/sync/shikimori/full`. Один раз, ~1–3 ч |
 | **Recent** | Сезоны 2026+ плюс ВСЕ ongoing/anons (даже старых лет)                                | `... recent` или `POST .../recent`. Автоматически раз в 24 часа при старте бекенда                  |
+| **Kodik**  | Обход Kodik `/list` (пагинация), проставляет `has_kodik` всему каталогу             | `... kodik` (вручную). Также авто в конце full/recent sync                                          |
 | **Status** | count, min/max год, by_year, sync_state                                              | `... status` или `GET .../status`                                                                   |
 
 Лимиты Shikimori (90 rpm): все sync-запросы идут последовательно через
 `sync_rate_limiter` (1 запрос / 0.85 с ≈ 70 rpm). Обычные запросы — через
 `gql_throttle`/`rest_throttle`. Прогресс пишется после каждого года — прерванный
-sync безопасно дозапускается.
+sync безопасно дозапускается. **Kodik-проход** пишет флаги только при ПОЛНОМ
+успешном обходе и непустом наборе — сбой сети не прячет каталог.
 
-Безопасность admin-endpoints: заголовок `X-Admin-Token` = `ADMIN_SYNC_TOKEN` из
-`.env`; если токен не задан — доступ только с localhost.
+Безопасность admin-endpoints (`/admin/sync/shikimori/*`): обязателен заголовок
+`X-Admin-Token` = `ADMIN_SYNC_TOKEN` (timing-safe сравнение); без токена эндпоинт
+отключён (403) — IP не доверяется (за прокси `request.client.host` подделываем).
 
 ---
 
@@ -143,16 +152,20 @@ sync безопасно дозапускается.
 | `ongoing.py` / `studio.py` / `related.py` / `posters.py` / `helpers.py` | онгоинги, студии, связанные, добивка постеров, утилиты                             |
 | `legacy_bulk.py`                                                        | старый прямой GQL-bulk; включается только `ALLOW_SHIKIMORI_BULK_FALLBACK=true`     |
 
-`services/kodik/`: `client.py` (HTTP /search и /list, кеш, проверка хостов),
-`normalize.py` (плеер, список озвучек, названия серий), `dubbing.py` (id по
-команде озвучки), `__init__.py` (`get_kodik_player`, `get_kodik_search_results`).
+`services/kodik/`: `client.py` (HTTP /search и /list, кеш, проверка хостов,
+`iter_kodik_shikimori_ids` — полный обход /list), `normalize.py` (плеер, список
+озвучек, названия серий), `dubbing.py` (id по команде озвучки),
+`availability.py` (`refresh_kodik_availability` — проставляет `has_kodik` всему
+каталогу из обхода /list), `__init__.py` (`get_kodik_player`,
+`get_kodik_search_results`).
 
 ---
 
 ## 5. Frontend: ключевые механизмы
 
-- **`useAnimeCache`** — модульный кеш сессии: bulk-каталог грузится один раз,
-  компоненты подписываются. Фоллбек на постраничную загрузку, если bulk пуст.
+- **`useAnimeCache`** — zustand-стор сессии: bulk-каталог грузится один раз,
+  компоненты подписываются. Общий клиентский стейт — на zustand (`useAuthUser`,
+  `useAnimeCache`); локальный — `useState`. Redux не используется.
 - **`useAnimeCatalog`** — фильтры+сортировка на клиенте
   (чистые функции в `utils/catalogClientFilter.ts`). Анонсы всегда в конце.
 - **`useCatalogFilters`** — фильтры в URL search-params (переживают reload);
@@ -190,7 +203,9 @@ sync безопасно дозапускается.
 - **Статические страницы** (`routers/static_pages.py` + `admin_static_pages.py`,
   `db/static_pages.py`): тексты agreement/privacy/copyright хранятся в SQLite,
   редактируются в админке, отдаются публично и рендерятся через
-  `features/static-pages/StaticPageView` + `pagesApi`.
+  `features/static-pages/StaticPageView` + `pagesApi`. БД — источник правды:
+  дефолты из `db/static_page_content/*.txt` заливаются один раз (seed,
+  `INSERT OR IGNORE`), дальше существующие строки не перетираются.
 
 Безопасность: auth-проверки только на сервере (скрытие кнопки на клиенте — UX,
 не защита). Email в публичный профиль не отдаётся.
@@ -235,7 +250,9 @@ DATABASE_PATH=./data/anime-viewer.db
 KODIK_API_KEY=...                  # токен Kodik
 SHIKIMORI_BASE_URL=https://shikimori.one
 SHIKIMORI_GQL_ENDPOINT=https://shikimori.io/api/graphql
-ADMIN_SYNC_TOKEN=                  # пусто = admin sync только с localhost
+YUMMYANIME_PRIVATE_TOKEN=          # запасные описания; без токена источник пропускается
+YUMMYANIME_PUBLIC_TOKEN=           # (хардкод-фолбэка больше нет)
+ADMIN_SYNC_TOKEN=                  # ОБЯЗАТЕЛЕН для /admin/sync/*; пусто = эндпоинт 403
 ALLOW_SHIKIMORI_BULK_FALLBACK=false
 BACKEND_URL=http://127.0.0.1:3001  # нужен только cron-задаче
 CATALOG_REFRESH_TOKEN=             # секрет для /internal/catalog/refresh (503 если пуст)

@@ -70,7 +70,7 @@
 
 ### `features/catalog/`
 
-- `hooks/useAnimeCache.ts` — session-level cache для `/anime/bulk`.
+- `hooks/useAnimeCache.ts` — session-level cache для `/anime/bulk` (zustand store).
 - `hooks/useAnimeCatalog.ts` — применяет client-side filters/sort/pagination.
 - `hooks/useCatalogFilterParams.ts` — состояние фильтров каталога.
 - `components/CatalogPageLayout.tsx`, `CatalogIntro.tsx`, `AnimeCatalog.tsx`.
@@ -122,10 +122,11 @@
 
 ### Other Features
 
-- `features/home/HomeSeasonRail.tsx` — горизонтальный rail на главной.
+- `features/home/HomeSeasonRail.tsx` — горизонтальный rail на главной
+  (новые онгоинги; отбор/сортировка — `utils/homeRail.ts: selectNewOngoings`).
 - `features/ongoing/*` — ongoing catalog blocks.
 - `features/studio/StudioSortBar.tsx` — сортировка studio page.
-- `features/auth/useAuthUser.ts` — module-level session store.
+- `features/auth/useAuthUser.ts` — shared session store (zustand).
 - `features/auth/authModalBus.ts` — открытие auth modal из любого места.
 - `features/components/*` — небольшие shared feature helpers.
 

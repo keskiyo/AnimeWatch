@@ -6,78 +6,59 @@ import {
 	saveAuthToken,
 } from '@/api/authApi'
 import type { AuthUser } from '@/types/auth'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { create } from 'zustand'
 
-// Module-level auth state shared by every subscriber (Header, ProfilePage, …)
-let currentUser: AuthUser | null = null
-let isInitialized = false
+type AuthState = {
+	user: AuthUser | null
+	isInitialized: boolean
+	login: (login: string, password: string) => Promise<AuthUser>
+	register: (name: string, email: string, password: string) => Promise<AuthUser>
+	logout: () => Promise<void>
+	refresh: () => Promise<void>
+}
+
+// Shared auth state (Header, ProfilePage, comments, …). One store instance.
+const useAuthStore = create<AuthState>()(set => ({
+	user: null,
+	isInitialized: false,
+	async login(login, password) {
+		const { token, user } = await apiLogin(login, password)
+		saveAuthToken(token)
+		set({ user })
+		return user
+	},
+	async register(name, email, password) {
+		const { token, user } = await apiRegister(name, email, password)
+		saveAuthToken(token)
+		set({ user })
+		return user
+	},
+	async logout() {
+		await apiLogout()
+		set({ user: null })
+	},
+	async refresh() {
+		set({ user: await apiGetMe() })
+	},
+}))
+
+// Restore the session from the saved token exactly once per JS session.
 let initStarted = false
-const listeners = new Set<() => void>()
-
-function notify() {
-	listeners.forEach(fn => fn())
-}
-
-function setUser(user: AuthUser | null) {
-	currentUser = user
-	notify()
-}
-
 async function initFromToken() {
-	currentUser = await apiGetMe()
-	isInitialized = true
-	notify()
+	const user = await apiGetMe()
+	useAuthStore.setState({ user, isInitialized: true })
 }
 
-/** Shared auth state: current user + login/register/logout actions. */
 export function useAuthUser() {
-	const [, tick] = useState(0)
+	const state = useAuthStore()
 
 	useEffect(() => {
-		const fn = () => tick(n => n + 1)
-		listeners.add(fn)
 		if (!initStarted) {
 			initStarted = true
 			void initFromToken()
 		}
-		return () => {
-			listeners.delete(fn)
-		}
 	}, [])
 
-	return {
-		user: currentUser,
-		isInitialized,
-		login,
-		register,
-		logout,
-		refresh,
-	}
-}
-
-async function login(loginValue: string, password: string): Promise<AuthUser> {
-	const { token, user } = await apiLogin(loginValue, password)
-	saveAuthToken(token)
-	setUser(user)
-	return user
-}
-
-async function register(
-	name: string,
-	email: string,
-	password: string,
-): Promise<AuthUser> {
-	const { token, user } = await apiRegister(name, email, password)
-	saveAuthToken(token)
-	setUser(user)
-	return user
-}
-
-async function logout(): Promise<void> {
-	await apiLogout()
-	setUser(null)
-}
-
-async function refresh(): Promise<void> {
-	setUser(await apiGetMe())
+	return state
 }

@@ -17,11 +17,19 @@ CREATE TABLE IF NOT EXISTS static_pages (
 
 _CONTENT_DIR = Path(__file__).with_name("static_page_content")
 
+# DB is the source of truth: seed file defaults ONCE per process/db path, then
+# never touch existing rows again (admin edits via the panel are authoritative).
+_initialized: set[str] = set()
+
 
 def ensure_static_pages_schema(database_path: str) -> None:
+    if database_path in _initialized:
+        return
     conn = connect(database_path)
     conn.execute(_SCHEMA)
     now = datetime.now(tz=UTC).isoformat()
+    # INSERT OR IGNORE only fills missing rows — it never overwrites existing
+    # content, so editing the .txt files no longer changes seeded/edited pages.
     for slug, (title, content) in _load_defaults().items():
         conn.execute(
             """
@@ -31,15 +39,8 @@ def ensure_static_pages_schema(database_path: str) -> None:
             """,
             (slug, title, content, now),
         )
-        conn.execute(
-            """
-            UPDATE static_pages
-            SET title = ?, content = ?, updated_at = ?
-            WHERE slug = ? AND updated_by IS NULL
-            """,
-            (title, content, now, slug),
-        )
     conn.commit()
+    _initialized.add(database_path)
 
 
 def _load_defaults() -> dict[str, tuple[str, str]]:

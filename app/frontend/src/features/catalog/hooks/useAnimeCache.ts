@@ -1,18 +1,7 @@
 import { getBulkCatalog } from '@/api/catalogApi'
 import type { Anime } from '@/types/anime'
-import { useEffect, useState } from 'react'
-
-// Module-level cache: one /anime/bulk request per JS session.
-let cachedAnime: Anime[] = []
-let cacheTotal = 0
-let cacheComplete = false
-let cacheError: string | undefined
-let cachePromise: Promise<void> | null = null
-const listeners = new Set<() => void>()
-
-function notify() {
-	listeners.forEach(fn => fn())
-}
+import { useEffect } from 'react'
+import { create } from 'zustand'
 
 export type AnimeCacheInfo = {
 	anime: Anime[]
@@ -22,54 +11,55 @@ export type AnimeCacheInfo = {
 	error?: string
 }
 
-export function useAnimeCache(): AnimeCacheInfo {
-	const [, tick] = useState(0)
+type AnimeCacheState = AnimeCacheInfo & { ensure: () => void }
 
-	useEffect(() => {
-		const fn = () => tick(n => n + 1)
-		listeners.add(fn)
-		return () => {
-			listeners.delete(fn)
-		}
-	}, [])
+// One /anime/bulk request per JS session, shared by every page.
+const useAnimeCacheStore = create<AnimeCacheState>()((set, get) => ({
+	anime: [],
+	total: 0,
+	isComplete: false,
+	isLoading: false,
+	error: undefined,
+	ensure() {
+		if (get().isComplete || cachePromise) return
+		set({ isLoading: true, error: undefined })
+		cachePromise = loadAnimeCache(set).finally(() => {
+			cachePromise = null
+		})
+	},
+}))
 
-	useEffect(() => {
-		ensureAnimeCache()
-	}, [])
+// Dedup guard kept outside reactive state (it's not used for rendering).
+let cachePromise: Promise<void> | null = null
 
-	return {
-		anime: cachedAnime,
-		total: cacheTotal,
-		isComplete: cacheComplete,
-		isLoading: Boolean(cachePromise),
-		error: cacheError,
-	}
-}
-
-function ensureAnimeCache() {
-	if (cacheComplete || cachePromise) return
-
-	cacheError = undefined
-	cachePromise = loadAnimeCache().finally(() => {
-		cachePromise = null
-		notify()
-	})
-	notify()
-}
-
-async function loadAnimeCache() {
+async function loadAnimeCache(
+	set: (partial: Partial<AnimeCacheState>) => void,
+): Promise<void> {
 	try {
 		const bulk = await getBulkCatalog()
 		if (bulk.data.length === 0) {
 			throw new Error('Bulk catalog returned empty data')
 		}
-		cachedAnime = bulk.data
-		cacheTotal = bulk.total || bulk.data.length
-		cacheComplete = true
-		cacheError = undefined
+		set({
+			anime: bulk.data,
+			total: bulk.total || bulk.data.length,
+			isComplete: true,
+			isLoading: false,
+			error: undefined,
+		})
 	} catch (err) {
 		console.warn('Bulk catalog load failed:', err)
-		cacheComplete = false
-		cacheError = 'Не удалось загрузить каталог'
+		set({ isComplete: false, isLoading: false, error: 'Не удалось загрузить каталог' })
 	}
+}
+
+export function useAnimeCache(): AnimeCacheInfo {
+	const { anime, total, isComplete, isLoading, error, ensure } =
+		useAnimeCacheStore()
+
+	useEffect(() => {
+		ensure()
+	}, [ensure])
+
+	return { anime, total, isComplete, isLoading, error }
 }
