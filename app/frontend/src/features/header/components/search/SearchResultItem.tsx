@@ -1,8 +1,8 @@
 import { PosterImage } from '@/components/anime/PosterImage'
 import type { Anime } from '@/types/anime'
-import { formatAnimeType } from '@/utils/animePageLabels'
-import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
-import { createAnimeSlug } from '@/utils/animeSlug'
+import { formatAnimeType } from '@/utils/animepage/animePageLabels'
+import { formatAnimeRating, getAnimeRatingColor } from '@/utils/anime/animeRating'
+import { createAnimeSlug } from '@/utils/anime/animeSlug'
 import { Link } from 'react-router-dom'
 
 type SearchResultItemProps = {

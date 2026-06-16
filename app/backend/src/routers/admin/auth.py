@@ -1,6 +1,6 @@
 from fastapi import Header, HTTPException
 
-from src.services.auth import AuthError, get_current_user
+from src.services.user.auth import AuthError, get_current_user
 
 
 def _bearer(authorization: str | None) -> str | None:

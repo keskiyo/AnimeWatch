@@ -6,7 +6,7 @@ import { AnimePlayerSidebar } from '@/features/animepage/components/player/Anime
 import { useAnimePlayerState } from '@/features/animepage/hooks/useAnimePlayerState'
 import { useFormattedDate } from '@/features/catalog/hooks/useFormattedDate'
 import type { AnimePlayerProps } from '@/types/animePage'
-import { formatPlayerAgeRating } from '@/utils/animePageLabels'
+import { formatPlayerAgeRating } from '@/utils/animepage/animePageLabels'
 import { useMemo, useState } from 'react'
 
 export function AnimePlayer({

@@ -1,5 +1,5 @@
 import type { Anime } from '@/types/anime'
-import { proxyImage } from '@/utils/imageProxy'
+import { proxyImage } from '@/utils/anime/imageProxy'
 
 function absolute(path: string): string {
 	return `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`

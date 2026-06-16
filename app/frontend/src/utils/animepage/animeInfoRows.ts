@@ -8,9 +8,9 @@ import {
 	formatSeason,
 	formatSource,
 	formatStatus,
-} from '@/utils/animePageLabels'
-import { formatAnimeReleaseYear } from '@/utils/animeYear'
-import { formatEpisodes, getNextEpisodeText } from '@/utils/animePageFormatters'
+} from '@/utils/animepage/animePageLabels'
+import { formatAnimeReleaseYear } from '@/utils/anime/animeYear'
+import { formatEpisodes, getNextEpisodeText } from '@/utils/animepage/animePageFormatters'
 
 /** Build the info panel rows for the anime hero section. */
 export function createInfoRows(

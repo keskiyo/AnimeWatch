@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { Anime } from '@/types/anime'
-import { applySort } from '@/utils/catalogClientFilter'
+import { applySort } from '@/utils/catalog/catalogClientFilter'
 
 function anime(part: Partial<Anime>): Anime {
 	return {

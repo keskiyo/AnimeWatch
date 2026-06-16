@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 
 from src.config import get_settings
-from src.db.admin_audit import list_admin_audit_logs
-from src.routers.admin_auth import require_admin
+from src.db.admin.audit import list_admin_audit_logs
+from src.routers.admin.auth import require_admin
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 

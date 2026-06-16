@@ -1,5 +1,5 @@
 import { HeaderUserChip } from '@/features/header/components/HeaderUserChip'
-import { NAV_ITEMS } from '@/utils/catalogData'
+import { NAV_ITEMS } from '@/utils/catalog/catalogData'
 import { Menu, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'

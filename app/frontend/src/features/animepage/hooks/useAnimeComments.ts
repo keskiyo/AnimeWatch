@@ -5,7 +5,7 @@ import {
 	updateAnimeComment,
 } from '@/api/commentsApi'
 import type { AnimeComment } from '@/types/reviews'
-import { collectDescendantIds, groupRepliesByParent } from '@/utils/commentTree'
+import { collectDescendantIds, groupRepliesByParent } from '@/utils/comments/commentTree'
 import { useEffect, useMemo, useState } from 'react'
 
 export function useAnimeComments(animeId: number) {

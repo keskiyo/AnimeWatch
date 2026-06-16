@@ -1,10 +1,10 @@
 import { PosterImage } from '@/components/anime/PosterImage'
 import type { Anime } from '@/types/anime'
 import type { CatalogViewMode } from '@/types/catalog'
-import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
-import { createAnimeSlug } from '@/utils/animeSlug'
-import { formatAnimeReleaseYear } from '@/utils/animeYear'
-import { formatCatalogAnimeType } from '@/utils/catalogFormatters'
+import { formatAnimeRating, getAnimeRatingColor } from '@/utils/anime/animeRating'
+import { createAnimeSlug } from '@/utils/anime/animeSlug'
+import { formatAnimeReleaseYear } from '@/utils/anime/animeYear'
+import { formatCatalogAnimeType } from '@/utils/catalog/catalogFormatters'
 import { Link } from 'react-router-dom'
 
 const CARD_CLASSES: Record<CatalogViewMode, string> = {

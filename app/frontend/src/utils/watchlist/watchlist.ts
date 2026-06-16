@@ -1,6 +1,6 @@
 import type { Anime, WatchlistEntry } from '@/types/anime'
 import type { WatchlistFilterState, WatchlistSort } from '@/types/watchlist'
-import { TYPE_BY_LABEL } from '@/utils/watchlistData'
+import { TYPE_BY_LABEL } from '@/utils/watchlist/watchlistData'
 
 export function getWatchlistTitle(anime: Anime): string {
 	return anime.title_ru || anime.title_en || 'Неизвестно'

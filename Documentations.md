@@ -43,35 +43,25 @@ app/
 │       │   ├── comments.py     #   комментарии/отзывы: list/create/vote/edit/delete
 │       │   ├── static_pages.py #   публичные статические страницы из SQLite
 │       │   ├── seo.py          #   /sitemap.xml (канонические URL для роботов)
-│       │   ├── admin_auth.py   #   проверка admin-сессии (зависимость)
-│       │   ├── admin_users.py / admin_user_actions.py  # управление юзерами
-│       │   ├── admin_static_pages.py  # CMS статических страниц
-│       │   ├── admin_audit.py  #   журнал admin-действий
-│       │   ├── admin_sync.py   #   /admin/sync/shikimori/* (full/recent/status)
+│       │   ├── admin/          #   пакет: auth, users, user_actions, static_pages,
+│       │   │                   #     comments (модерация), audit, sync
 │       │   └── internal_catalog.py    # cron /internal/catalog/refresh
 │       ├── db/
-│       │   ├── anime_catalog.py         # ПОСТОЯННАЯ таблица каталога: схема, upsert
-│       │   ├── anime_catalog_queries.py # чтение: фильтры, сортировка, страницы, stats
-│       │   ├── anime_catalog_lookup.py  # точечные lookups (by ids/studio/schedule)
-│       │   ├── sync_state.py            # состояние синхронизаций (key-value)
-│       │   ├── cache.py                 # TTL-кеш api_cache
-│       │   ├── users.py                 # users/sessions/scrypt-хеши
-│       │   ├── admin_users.py / admin_audit.py  # admin-запросы + журнал
-│       │   ├── comments.py              # комментарии/голоса/ответы
-│       │   ├── static_pages.py          # таблица статических страниц (CMS)
-│       │   └── library.py / watchlist.py  # watchlist/progress/settings store
+│       │   ├── anime_catalog.py / _queries.py / _lookup.py  # каталог: схема/чтение
+│       │   ├── sync_state.py / cache.py     # состояние sync + TTL-кеш
+│       │   ├── static_pages.py              # таблица статических страниц (CMS)
+│       │   ├── user/           # пакет: users (сессии/хеши), comments (дерево),
+│       │   │                   #     watchlist, library
+│       │   └── admin/          # пакет: users, audit, comments (модерация)
 │       ├── services/
 │       │   ├── shikimori/      # слой данных Shikimori (см. §4)
-│       │   ├── kodik/          # слой данных Kodik (client/normalize/dubbing)
-│       │   ├── catalog.py / catalog_filter.py / catalog_related.py  # каталог
-│       │   ├── content.py / schedule.py  # episodes, расписание, студии
-│       │   ├── auth.py / avatars.py      # аккаунты, сессии, WEBP-аватары
-│       │   ├── library.py / watchlist.py # сервисы watchlist/settings
-│       │   ├── catalog_refresh.py        # cron-обёртка (lock/timeout/summary)
-│       │   ├── seo.py                     # anime_slug + билдер sitemap.xml
+│       │   ├── kodik/          # слой данных Kodik (client/normalize/dubbing/availability)
+│       │   ├── catalog/        # пакет: catalog, catalog_filter, catalog_related, catalog_refresh
+│       │   ├── user/           # пакет: auth (сессии), avatars, library, watchlist
+│       │   ├── content.py / schedule.py / seo.py / image_proxy.py  # прочее
 │       │   └── yummyanime.py             # запасные описания
 │       └── scripts/
-│           └── sync_shikimori.py  # CLI: full / recent / status
+│           └── sync_shikimori.py  # CLI: full / recent / kodik / status
 └── frontend/
     └── src/
         ├── api/                # тонкие API-клиенты (по доменам)
@@ -88,7 +78,8 @@ app/
         │   └── <feature>/components + hooks
         ├── types/              # ВСЕ shared-типы (anime, animePage, catalog, search,
         │                       #   studio, auth, reviews, watchlist, admin, staticPage)
-        ├── utils/              # чистые функции и константы
+        ├── utils/              # по доменам: catalog/, animepage/, anime/,
+        │                       #   watchlist/, comments/, staticPage/ + общие в корне
         └── styles/index.css    # Tailwind-тема (тёмная, единственная)
 ```
 

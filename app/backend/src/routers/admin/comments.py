@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.config import get_settings
-from src.db.admin_audit import add_admin_audit_log
-from src.db.admin_comments import list_admin_comments
-from src.db.comments import delete_comment, get_comment
-from src.routers.admin_auth import require_admin
+from src.db.admin.audit import add_admin_audit_log
+from src.db.admin.comments import list_admin_comments
+from src.db.user.comments import delete_comment, get_comment
+from src.routers.admin.auth import require_admin
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 

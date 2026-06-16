@@ -2,7 +2,7 @@ import type {
 	WatchlistFilterState,
 	WatchlistFiltersProps,
 } from '@/types/watchlist'
-import { filterGroups } from '@/utils/catalogData'
+import { filterGroups } from '@/utils/catalog/catalogData'
 import { X } from 'lucide-react'
 import { WatchlistGenreFilter } from './WatchlistGenreFilter'
 import { WatchlistSortFilter } from './WatchlistSortFilter'

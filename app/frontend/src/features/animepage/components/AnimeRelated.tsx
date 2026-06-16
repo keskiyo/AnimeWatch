@@ -1,7 +1,7 @@
 import { PosterImage } from '@/components/anime/PosterImage'
 import type { RelatedAnime } from '@/types/anime'
-import { formatAnimeRating, getAnimeRatingColor } from '@/utils/animeRating'
-import { createAnimeSlug } from '@/utils/animeSlug'
+import { formatAnimeRating, getAnimeRatingColor } from '@/utils/anime/animeRating'
+import { createAnimeSlug } from '@/utils/anime/animeSlug'
 import { Link } from 'react-router-dom'
 
 type AnimeRelatedProps = {

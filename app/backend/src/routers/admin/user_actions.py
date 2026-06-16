@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.config import get_settings
-from src.db.admin_audit import add_admin_audit_log
-from src.db.admin_users import set_admin_user_blocked, set_admin_user_role
-from src.db.users import get_user_by_id
-from src.routers.admin_auth import require_admin
+from src.db.admin.audit import add_admin_audit_log
+from src.db.admin.users import set_admin_user_blocked, set_admin_user_role
+from src.db.user.users import get_user_by_id
+from src.routers.admin.auth import require_admin
 from src.schemas.requests import AdminBlockedRequest, AdminRoleRequest
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])

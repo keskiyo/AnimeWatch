@@ -1,5 +1,5 @@
 import { useCatalogFilterParams } from '@/features/catalog/hooks/useCatalogFilterParams'
-import { filterGroups } from '@/utils/catalogData'
+import { filterGroups } from '@/utils/catalog/catalogData'
 import { CheckboxGroup } from './CheckboxGroup'
 import { GenreDropdown } from './GenreDropdown'
 import { YearRangeFilter } from './YearRangeFilter'

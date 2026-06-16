@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { parseStaticPageLinks } from '@/utils/staticPageMarkup'
+import { parseStaticPageLinks } from '@/utils/staticPage/staticPageMarkup'
 
 describe('parseStaticPageLinks', () => {
 	test('parses safe markdown links and keeps plain text', () => {

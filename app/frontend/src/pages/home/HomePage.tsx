@@ -7,7 +7,7 @@ import {
 	HOME_FREE_TITLE,
 	HOME_INTRO_PARAGRAPHS,
 	HOME_INTRO_TITLE,
-} from '@/utils/catalogTexts'
+} from '@/utils/catalog/catalogTexts'
 import { setPageMeta } from '@/utils/pageMeta'
 import { useEffect, useState } from 'react'
 

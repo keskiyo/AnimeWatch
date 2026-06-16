@@ -3,8 +3,8 @@
 from fastapi import APIRouter, Header, HTTPException
 
 from src.schemas.requests import ProgressRequest, SettingsRequest, WatchlistToggleRequest
-from src.services.auth import AuthError, get_current_user
-from src.services.library import (
+from src.services.user.auth import AuthError, get_current_user
+from src.services.user.library import (
     get_app_settings,
     get_notifications,
     get_progress,
@@ -12,7 +12,7 @@ from src.services.library import (
     merge_settings,
     upsert_progress,
 )
-from src.services.watchlist import (
+from src.services.user.watchlist import (
     delete_user_watchlist_anime,
     get_user_watchlist,
     toggle_user_watchlist_status,

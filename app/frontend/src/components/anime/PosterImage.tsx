@@ -1,4 +1,4 @@
-import { proxyImage } from '@/utils/imageProxy'
+import { proxyImage } from '@/utils/anime/imageProxy'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 type PosterImageProps = {

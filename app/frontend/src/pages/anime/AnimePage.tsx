@@ -4,10 +4,10 @@ import { AnimePageContent } from '@/features/animepage/components/AnimePageConte
 import { EmptyAnimePage } from '@/features/animepage/components/EmptyAnimePage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import type { AnimePageData } from '@/types/animePage'
-import { createAnimePageData } from '@/utils/animePageData'
-import { createAnimeSlug, parseAnimeSlugId } from '@/utils/animeSlug'
+import { createAnimePageData } from '@/utils/animepage/animePageData'
+import { createAnimeSlug, parseAnimeSlugId } from '@/utils/anime/animeSlug'
 import { setPageMeta } from '@/utils/pageMeta'
-import { animeJsonLd } from '@/utils/structuredData'
+import { animeJsonLd } from '@/utils/animepage/structuredData'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 

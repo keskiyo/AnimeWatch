@@ -1,6 +1,6 @@
 import { WatchlistFilterDropdown } from './WatchlistFilterDropdown'
 import type { WatchlistSortFilterProps } from '@/types/watchlist'
-import { WATCHLIST_SORT_OPTIONS } from '@/utils/watchlistData'
+import { WATCHLIST_SORT_OPTIONS } from '@/utils/watchlist/watchlistData'
 import { Check } from 'lucide-react'
 
 export function WatchlistSortFilter({ value, onChange }: WatchlistSortFilterProps) {

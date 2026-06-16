@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Header, HTTPException
 
 from src.config import get_settings
-from src.db.comments import (
+from src.db.user.comments import (
     add_comment,
     delete_comment,
     get_comment,
@@ -13,7 +13,7 @@ from src.db.comments import (
     update_comment,
 )
 from src.schemas.requests import CommentRequest, VoteRequest
-from src.services.auth import AuthError, get_current_user
+from src.services.user.auth import AuthError, get_current_user
 
 router = APIRouter(prefix="/api", tags=["comments"])
 

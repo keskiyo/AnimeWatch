@@ -1,5 +1,5 @@
 import type { WatchlistGenreFilterProps } from '@/types/watchlist'
-import { filterGenreOptions } from '@/utils/catalogData'
+import { filterGenreOptions } from '@/utils/catalog/catalogData'
 import { useMemo, useState } from 'react'
 import { WatchlistFilterDropdown } from './WatchlistFilterDropdown'
 

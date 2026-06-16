@@ -2,7 +2,7 @@ import { useStaticPage } from '@/features/static-pages/useStaticPage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import type { StaticPageSlug } from '@/types/staticPage'
 import { setPageMeta } from '@/utils/pageMeta'
-import { parseStaticPageLinks } from '@/utils/staticPageMarkup'
+import { parseStaticPageLinks } from '@/utils/staticPage/staticPageMarkup'
 import { useEffect } from 'react'
 
 type StaticPageViewProps = {

@@ -5,14 +5,14 @@ import asyncio
 from fastapi import APIRouter, Header, HTTPException, UploadFile
 
 from src.config import get_settings
-from src.db.users import set_user_avatar
+from src.db.user.users import set_user_avatar
 from src.schemas.requests import (
     ChangePasswordRequest,
     LoginRequest,
     RegisterRequest,
     UpdateProfileRequest,
 )
-from src.services.auth import (
+from src.services.user.auth import (
     AuthError,
     change_password,
     get_current_user,
@@ -21,7 +21,7 @@ from src.services.auth import (
     register_user,
     update_profile,
 )
-from src.services.avatars import MAX_UPLOAD_BYTES, AvatarError, process_and_save_avatar
+from src.services.user.avatars import MAX_UPLOAD_BYTES, AvatarError, process_and_save_avatar
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 

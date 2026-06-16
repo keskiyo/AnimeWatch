@@ -1,5 +1,5 @@
 import type { SortDropdownProps, SortOption } from '@/types/catalog'
-import { sortOptions } from '@/utils/catalogData'
+import { sortOptions } from '@/utils/catalog/catalogData'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 

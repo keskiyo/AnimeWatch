@@ -1,9 +1,9 @@
 import { PosterImage } from '@/components/anime/PosterImage'
 import type { WatchlistEntry } from '@/types/anime'
-import { formatAnimeRating } from '@/utils/animeRating'
-import { createAnimeSlug } from '@/utils/animeSlug'
-import { getWatchlistTitle } from '@/utils/watchlist'
-import { WATCHLIST_TYPE_LABELS } from '@/utils/watchlistData'
+import { formatAnimeRating } from '@/utils/anime/animeRating'
+import { createAnimeSlug } from '@/utils/anime/animeSlug'
+import { getWatchlistTitle } from '@/utils/watchlist/watchlist'
+import { WATCHLIST_TYPE_LABELS } from '@/utils/watchlist/watchlistData'
 import { Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 

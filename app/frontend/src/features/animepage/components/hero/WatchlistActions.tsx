@@ -2,7 +2,7 @@ import { getWatchlist, toggleWatchlistStatus } from '@/api/watchlistApi'
 import { useAuthUser } from '@/features/auth/useAuthUser'
 import type { WatchlistStatus } from '@/types/anime'
 import { notifyError, notifySuccess } from '@/utils/notify'
-import { WATCHLIST_LABELS, WATCHLIST_STATUSES } from '@/utils/watchlistData'
+import { WATCHLIST_LABELS, WATCHLIST_STATUSES } from '@/utils/watchlist/watchlistData'
 import { Cloud, Clock, Eye, EyeOff, Flag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

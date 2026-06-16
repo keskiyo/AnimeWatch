@@ -1,5 +1,5 @@
 import type { Anime } from '@/types/anime'
-import { formatAnimeReleaseYear } from '@/utils/animeYear'
+import { formatAnimeReleaseYear } from '@/utils/anime/animeYear'
 
 export function formatAnimeType(value: string): string {
 	const labels: Record<string, string> = {

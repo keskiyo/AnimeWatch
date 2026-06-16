@@ -4,14 +4,14 @@ import asyncio
 from datetime import UTC, datetime
 
 from src.config import get_settings
-from src.db.watchlist import (
+from src.db.user.watchlist import (
     VALID_WATCHLIST_STATUSES,
     delete_watchlist_anime,
     list_user_anime_statuses,
     list_user_watchlist,
     toggle_watchlist_status,
 )
-from src.services.catalog import get_anime_by_id
+from src.services.catalog.catalog import get_anime_by_id
 
 
 async def get_user_watchlist(user_id: int) -> list[dict]:

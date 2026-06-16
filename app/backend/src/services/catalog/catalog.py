@@ -8,7 +8,7 @@ from src.db.anime_catalog_queries import (
 )
 from src.logger import get_logger
 from src.models import Anime
-from src.services.catalog_related import merge_related_with_catalog_family
+from src.services.catalog.catalog_related import merge_related_with_catalog_family
 from src.services.shikimori import get_cache
 from src.services.shikimori.normalizers import normalize_related
 

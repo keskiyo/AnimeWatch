@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.config import get_settings
-from src.db.admin_audit import add_admin_audit_log
+from src.db.admin.audit import add_admin_audit_log
 from src.db.static_pages import (
     ALLOWED_STATIC_PAGE_SLUGS,
     list_static_pages,
     update_static_page,
 )
-from src.routers.admin_auth import require_admin
+from src.routers.admin.auth import require_admin
 from src.schemas.requests import StaticPageUpdateRequest
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])

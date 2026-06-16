@@ -107,17 +107,15 @@
 
 ### `features/admin/`
 
-- `components/AdminTabs.tsx`, `AdminUsersPanel.tsx`, `AdminUsersTable.tsx`,
-  `AdminUserActions.tsx`, `AdminPasswordResetModal.tsx` — управление
-  пользователями (роль, бан, сброс пароля).
-- `components/AdminPagesPanel.tsx`, `AdminPageParts.tsx` — CMS статических
-  страниц.
-- `components/AdminAuditPanel.tsx` — журнал admin-действий.
-- `components/AdminCommentsPanel.tsx` + `AdminCommentsTable.tsx` — модерация
-  комментариев (список + удаление); `hooks/useAdminComments.ts`.
-- `components/AdminConfirmDialog.tsx`, `AdminPagination.tsx`,
-  `AdminCommentsPlaceholder.tsx` — общие части админки.
-- `hooks/useAdminUsers.ts`, `useAdminAudit.ts`, `useAdminStaticPages.ts`.
+Компоненты сгруппированы по доменам (блок-подпапки):
+- `components/users/` — AdminUsersPanel/Table/UserActions/PasswordResetModal.
+- `components/pages/` — AdminPagesPanel (CMS).
+- `components/audit/` — AdminAuditPanel (журнал).
+- `components/comments/` — AdminCommentsPanel/Table (модерация).
+- `components/` (общие, cross-block): AdminTabs, AdminPagination,
+  AdminConfirmDialog, AdminPageParts.
+- `hooks/` (плоско): useAdminUsers, useAdminAudit, useAdminStaticPages,
+  useAdminComments.
 
 ### `features/static-pages/`
 
@@ -125,8 +123,7 @@
 
 ### Other Features
 
-- `features/home/HomeSeasonRail.tsx` — горизонтальный rail на главной
-  (новые онгоинги; отбор/сортировка — `utils/homeRail.ts: selectNewOngoings`).
+- `features/home/HomeSeasonRail.tsx` — горизонтальный rail на главной.
 - `features/ongoing/*` — ongoing catalog blocks.
 - `features/studio/StudioSortBar.tsx` — сортировка studio page.
 - `features/auth/useAuthUser.ts` — shared session store (zustand).
@@ -143,15 +140,16 @@
 
 ## `src/utils/`
 
-
-- `catalogClientFilter.ts`, `catalogFilters.ts`, `catalogData.ts`,
-  `catalogFormatters.ts`, `catalogTexts.ts`.
-- `animePageData.ts`, `animePagePlayerData.ts`, `animeInfoRows.ts`,
-  `animePageFormatters.ts`, `animePageLabels.ts`.
-- `animeSlug.ts`, `animeRating.ts`, `imageProxy.ts`, `kodikLink.ts`.
-- `authValidation.ts`, `pageMeta.ts` (title/canonical/OG/robots/JSON-LD),
-  `structuredData.ts` (anime JSON-LD), `notify.ts`, `player.ts`.
-- `watchlist.ts`, `watchlistData.ts`, `watchlist.test.ts`.
+Сгруппированы по доменам:
+- `catalog/` — catalogClientFilter, catalogFilters, catalogData,
+  catalogFormatters, catalogTexts.
+- `animepage/` — animePageData, animePagePlayerData, animeInfoRows,
+  animePageFormatters, animePageLabels, structuredData (JSON-LD), player.
+- `anime/` — animeSlug, animeRating, animeYear, imageProxy, kodikLink.
+- `watchlist/` — watchlist, watchlistData.
+- `comments/` — commentTree. `staticPage/` — staticPageMarkup.
+- корень (cross-cutting): `notify.ts`, `authValidation.ts`,
+  `pageMeta.ts` (title/canonical/OG/robots/JSON-LD).
 
 
 ## `src/styles/index.css`

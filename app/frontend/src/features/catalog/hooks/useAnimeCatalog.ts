@@ -5,8 +5,8 @@ import type {
 	SortDirection,
 	SortOption,
 } from '@/types/catalog'
-import { applyFilters, applySort } from '@/utils/catalogClientFilter'
-import { CATALOG_VIEW_MODES } from '@/utils/catalogData'
+import { applyFilters, applySort } from '@/utils/catalog/catalogClientFilter'
+import { CATALOG_VIEW_MODES } from '@/utils/catalog/catalogData'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAnimeCache } from './useAnimeCache'
 

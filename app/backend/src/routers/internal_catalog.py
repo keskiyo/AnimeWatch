@@ -11,7 +11,7 @@ from fastapi import APIRouter, Header, HTTPException
 
 from src.config import get_settings
 from src.logger import get_logger
-from src.services.catalog_refresh import (
+from src.services.catalog.catalog_refresh import (
     get_refresh_status,
     is_refresh_running,
     run_catalog_refresh,

@@ -34,3 +34,6 @@ frontend/tests/
 
 # Cache
 .pytest_cache/
+
+
+BACKEND_INFO.md

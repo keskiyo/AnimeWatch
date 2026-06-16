@@ -5,7 +5,7 @@ import type {
 	AnimePlayerTrack,
 	AnimeScheduleRow,
 } from '@/types/animePage'
-import { formatScheduleDate } from '@/utils/animePageFormatters'
+import { formatScheduleDate } from '@/utils/animepage/animePageFormatters'
 
 export function createPlayerTracks(
 	player: KodikPlayer | undefined,

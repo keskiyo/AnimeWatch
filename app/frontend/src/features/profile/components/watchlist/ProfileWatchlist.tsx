@@ -7,8 +7,8 @@ import type { WatchlistFilterState } from '@/types/watchlist'
 import {
 	filterWatchlistEntries,
 	sortWatchlistEntries,
-} from '@/utils/watchlist'
-import { WATCHLIST_LABELS } from '@/utils/watchlistData'
+} from '@/utils/watchlist/watchlist'
+import { WATCHLIST_LABELS } from '@/utils/watchlist/watchlistData'
 import { useEffect, useMemo, useState } from 'react'
 
 type ProfileWatchlistProps = {

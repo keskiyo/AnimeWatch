@@ -2,8 +2,8 @@ import asyncio
 from datetime import UTC, datetime
 
 from src.config import get_settings
-from src.db.library import LibraryStore
-from src.services.catalog import get_anime_by_id
+from src.db.user.library import LibraryStore
+from src.services.catalog.catalog import get_anime_by_id
 
 VALID_WATCHLIST_STATUSES = {"watching", "planned", "completed", "dropped"}
 

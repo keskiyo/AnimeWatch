@@ -1,6 +1,6 @@
 import type { KodikPlayer } from '@/types/anime'
 import type { AnimePlayerTrack, PlayerProvider } from '@/types/animePage'
-import { buildKodikEpisodeLink } from '@/utils/kodikLink'
+import { buildKodikEpisodeLink } from '@/utils/anime/kodikLink'
 import { useEffect, useMemo, useState } from 'react'
 
 type UseAnimePlayerStateArgs = {

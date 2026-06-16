@@ -1,6 +1,6 @@
 import { PlayerPlaceholder } from '@/features/animepage/components/player/PlayerPlaceholder'
 import type { KodikPlayer } from '@/types/anime'
-import { isAllowedPlayerUrl } from '@/utils/player'
+import { isAllowedPlayerUrl } from '@/utils/animepage/player'
 
 type AnimePlayerFrameProps = {
 	title: string

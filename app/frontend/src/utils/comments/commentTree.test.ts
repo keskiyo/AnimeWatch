@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { AnimeComment } from '@/types/reviews'
-import { collectDescendantIds, groupRepliesByParent } from '@/utils/commentTree'
+import { collectDescendantIds, groupRepliesByParent } from '@/utils/comments/commentTree'
 
 function c(id: number, parent_id: number | null): AnimeComment {
 	return {

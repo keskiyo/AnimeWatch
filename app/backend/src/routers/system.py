@@ -4,8 +4,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, Response
 
 from src.config import get_settings
-from src.db.users import get_user_by_id
-from src.services.avatars import avatar_path
+from src.db.user.users import get_user_by_id
+from src.services.user.avatars import avatar_path
 from src.services.image_proxy import fetch_proxied_image
 
 router = APIRouter(prefix="/api", tags=["system"])

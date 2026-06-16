@@ -1,7 +1,7 @@
 import asyncio
 
 from src.logger import get_logger
-from src.services.catalog import get_anime_by_id
+from src.services.catalog.catalog import get_anime_by_id
 from src.services.kodik import (
     extract_episode_titles,
     get_kodik_search_results,

@@ -10,7 +10,7 @@ import type {
 	SortDirection,
 	SortOption,
 } from '@/types/catalog'
-import { parseClientFilters } from '@/utils/catalogFilters'
+import { parseClientFilters } from '@/utils/catalog/catalogFilters'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 

@@ -1,5 +1,5 @@
 import type { WatchlistEntry, WatchlistStatus } from '@/types/anime'
-import { WATCHLIST_LABELS, WATCHLIST_STATUSES } from '@/utils/watchlistData'
+import { WATCHLIST_LABELS, WATCHLIST_STATUSES } from '@/utils/watchlist/watchlistData'
 
 type WatchlistTabsProps = {
 	active: WatchlistStatus

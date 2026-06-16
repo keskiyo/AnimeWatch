@@ -1,5 +1,5 @@
 import type { CatalogViewMode } from '@/types/catalog'
-import { CATALOG_VIEW_MODES } from '@/utils/catalogData'
+import { CATALOG_VIEW_MODES } from '@/utils/catalog/catalogData'
 import { Grip, LayoutGrid, List } from 'lucide-react'
 import { useEffect } from 'react'
 

@@ -8,11 +8,11 @@ import type {
 	SortDirection,
 	SortOption,
 } from '@/types/catalog'
-import { parseClientFilters } from '@/utils/catalogFilters'
+import { parseClientFilters } from '@/utils/catalog/catalogFilters'
 import {
 	CATALOG_INTRO_COLLAPSED,
 	CATALOG_INTRO_EXPANDED,
-} from '@/utils/catalogTexts'
+} from '@/utils/catalog/catalogTexts'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SortDropdown } from '@/features/catalog/components/controls/SortDropdown'

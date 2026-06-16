@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException
 
 from src.logger import get_logger
-from src.services.catalog import (
+from src.services.catalog.catalog import (
     get_anime_by_id,
     get_anime_catalog,
     get_anime_related,

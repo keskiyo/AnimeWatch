@@ -1,19 +1,19 @@
 import type { Anime, KodikPlayer, RelatedAnime } from '@/types/anime'
 import type { AnimeFrame, AnimePageData } from '@/types/animePage'
-import { createInfoRows } from '@/utils/animeInfoRows'
+import { createInfoRows } from '@/utils/animepage/animeInfoRows'
 import {
 	createPlayerBackground,
 	getNextEpisodeText,
 	getPositiveCount,
 	normalizeAnimeTitle,
 	stripBBCode,
-} from '@/utils/animePageFormatters'
+} from '@/utils/animepage/animePageFormatters'
 import {
 	createPlayerEpisodes,
 	createPlayerProviders,
 	createPlayerTracks,
 	createScheduleRows,
-} from '@/utils/animePagePlayerData'
+} from '@/utils/animepage/animePagePlayerData'
 
 const UNKNOWN_TEXT = 'Неизвестно'
 

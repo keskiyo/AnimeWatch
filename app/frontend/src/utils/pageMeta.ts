@@ -1,5 +1,5 @@
-import { stripBBCode } from '@/utils/animePageFormatters'
-import { proxyImage } from '@/utils/imageProxy'
+import { stripBBCode } from '@/utils/animepage/animePageFormatters'
+import { proxyImage } from '@/utils/anime/imageProxy'
 
 const SITE_NAME = 'AnimeWatch'
 const DEFAULT_DESCRIPTION =

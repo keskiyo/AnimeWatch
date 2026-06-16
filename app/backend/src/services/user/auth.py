@@ -3,8 +3,8 @@
 import re
 
 from src.config import get_settings
-from src.db.admin_users import is_user_blocked, touch_user_last_seen
-from src.db.users import (
+from src.db.admin.users import is_user_blocked, touch_user_last_seen
+from src.db.user.users import (
     create_session,
     create_user,
     delete_session,
@@ -118,7 +118,7 @@ def seed_admin_user() -> None:
     """Create the default admin (login: admin / password: admin) once.
 
     Change the password right after the first login — via the profile page
-    or: python -c "from src.services.auth import reset_password_cli; reset_password_cli('admin', 'NEW')"
+    or: python -c "from src.services.user.auth import reset_password_cli; reset_password_cli('admin', 'NEW')"
     """
     db = _db()
     ensure_users_schema(db)
