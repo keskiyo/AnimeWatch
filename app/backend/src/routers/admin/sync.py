@@ -66,7 +66,6 @@ async def start_recent_sync(request: Request) -> dict:
 async def sync_status(request: Request) -> dict:
     """Catalog stats + sync state."""
     _check_access(request)
-    env = get_settings()
-    stats = get_anime_catalog_stats(env.database_path)
-    stats["sync_state"] = get_all_sync_state(env.database_path)
+    stats = await get_anime_catalog_stats()
+    stats["sync_state"] = await get_all_sync_state()
     return stats

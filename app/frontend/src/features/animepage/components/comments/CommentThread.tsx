@@ -7,11 +7,11 @@ const MAX_INDENT_DEPTH = 6 // stop growing the indent so deep threads don't run 
 
 type CommentThreadProps = {
 	comment: AnimeComment
-	repliesByParent: Map<number, AnimeComment[]>
+	repliesByParent: Map<string, AnimeComment[]>
 	depth: number
-	onReply: (parentId: number, text: string) => Promise<void>
-	onEdit: (commentId: number, text: string) => Promise<void>
-	onDelete: (commentId: number) => Promise<void>
+	onReply: (parentId: string, text: string) => Promise<void>
+	onEdit: (commentId: string, text: string) => Promise<void>
+	onDelete: (commentId: string) => Promise<void>
 }
 
 /** One comment node + its nested replies (recursive, Reddit-style tree). */

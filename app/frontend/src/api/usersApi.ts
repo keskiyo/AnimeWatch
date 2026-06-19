@@ -5,7 +5,7 @@ import type { AuthUser } from '@/types/auth'
 export type PublicUser = Omit<AuthUser, 'email'>
 
 export async function getPublicUser(
-	userId: number,
+	userId: string,
 ): Promise<PublicUser | null> {
 	try {
 		const response = await apiClient.get<PublicUser>(`/users/${userId}`)

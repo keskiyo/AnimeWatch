@@ -4,7 +4,7 @@ import { withFallback } from '@/api/fallback'
 import type { WatchlistEntry, WatchlistStatus } from '@/types/anime'
 
 export type WatchlistToggleResult = {
-	user_id: number
+	user_id: string
 	anime_id: number
 	status: WatchlistStatus
 	active: boolean
@@ -22,7 +22,7 @@ export async function getWatchlist(): Promise<WatchlistEntry[]> {
 }
 
 export async function getUserWatchlist(
-	userId: number,
+	userId: string,
 ): Promise<WatchlistEntry[]> {
 	return withFallback(async () => {
 		const response = await apiClient.get<WatchlistEntry[]>(

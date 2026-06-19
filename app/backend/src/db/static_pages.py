@@ -1,46 +1,18 @@
+"""Static pages (CMS) — Mongo `static_pages` collection (_id = slug).
+
+DB is the source of truth: file defaults seed missing slugs ONCE (never
+overwrite existing/edited rows). Admin edits via the panel are authoritative.
+"""
+
 from datetime import UTC, datetime
 from pathlib import Path
 
-from src.db.anime_catalog import connect
+from src.db.mongo import get_db, to_oid
 
 ALLOWED_STATIC_PAGE_SLUGS = {"agreement", "privacy", "copyright"}
 
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS static_pages (
-    slug TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    updated_by INTEGER
-);
-"""
-
 _CONTENT_DIR = Path(__file__).with_name("static_page_content")
-
-# DB is the source of truth: seed file defaults ONCE per process/db path, then
-# never touch existing rows again (admin edits via the panel are authoritative).
-_initialized: set[str] = set()
-
-
-def ensure_static_pages_schema(database_path: str) -> None:
-    if database_path in _initialized:
-        return
-    conn = connect(database_path)
-    conn.execute(_SCHEMA)
-    now = datetime.now(tz=UTC).isoformat()
-    # INSERT OR IGNORE only fills missing rows — it never overwrites existing
-    # content, so editing the .txt files no longer changes seeded/edited pages.
-    for slug, (title, content) in _load_defaults().items():
-        conn.execute(
-            """
-            INSERT OR IGNORE INTO static_pages
-            (slug, title, content, updated_at, updated_by)
-            VALUES (?, ?, ?, ?, NULL)
-            """,
-            (slug, title, content, now),
-        )
-    conn.commit()
-    _initialized.add(database_path)
+_seeded = False
 
 
 def _load_defaults() -> dict[str, tuple[str, str]]:
@@ -52,45 +24,54 @@ def _load_defaults() -> dict[str, tuple[str, str]]:
     return defaults
 
 
-def list_static_pages(database_path: str) -> list[dict]:
-    ensure_static_pages_schema(database_path)
-    rows = connect(database_path).execute(
-        """
-        SELECT slug, title, content, updated_at, updated_by
-        FROM static_pages ORDER BY slug
-        """
-    ).fetchall()
-    return [dict(row) for row in rows]
+async def _ensure_seeded() -> None:
+    global _seeded
+    if _seeded:
+        return
+    now = datetime.now(tz=UTC).isoformat()
+    coll = get_db().static_pages
+    for slug, (title, content) in _load_defaults().items():
+        # $setOnInsert only fills a missing slug — never overwrites an edit.
+        await coll.update_one(
+            {"_id": slug},
+            {"$setOnInsert": {"title": title, "content": content,
+                              "updated_at": now, "updated_by": None}},
+            upsert=True,
+        )
+    _seeded = True
 
 
-def get_static_page(database_path: str, slug: str) -> dict | None:
-    ensure_static_pages_schema(database_path)
-    row = connect(database_path).execute(
-        """
-        SELECT slug, title, content, updated_at, updated_by
-        FROM static_pages WHERE slug = ?
-        """,
-        (slug,),
-    ).fetchone()
-    return dict(row) if row else None
+def _page(doc: dict) -> dict:
+    by = doc.get("updated_by")
+    return {
+        "slug": doc["_id"],
+        "title": doc.get("title", ""),
+        "content": doc.get("content", ""),
+        "updated_at": doc.get("updated_at", ""),
+        "updated_by": str(by) if by else None,
+    }
 
 
-def update_static_page(
-    database_path: str,
-    slug: str,
-    title: str,
-    content: str,
-    admin_id: int,
+async def list_static_pages() -> list[dict]:
+    await _ensure_seeded()
+    cursor = get_db().static_pages.find({}).sort("_id", 1)
+    return [_page(doc) async for doc in cursor]
+
+
+async def get_static_page(slug: str) -> dict | None:
+    await _ensure_seeded()
+    doc = await get_db().static_pages.find_one({"_id": slug})
+    return _page(doc) if doc else None
+
+
+async def update_static_page(
+    slug: str, title: str, content: str, admin_id: object
 ) -> dict | None:
-    ensure_static_pages_schema(database_path)
-    conn = connect(database_path)
-    conn.execute(
-        """
-        UPDATE static_pages
-        SET title = ?, content = ?, updated_at = ?, updated_by = ?
-        WHERE slug = ?
-        """,
-        (title, content, datetime.now(tz=UTC).isoformat(), admin_id, slug),
+    await _ensure_seeded()
+    await get_db().static_pages.update_one(
+        {"_id": slug},
+        {"$set": {"title": title, "content": content,
+                  "updated_at": datetime.now(tz=UTC).isoformat(),
+                  "updated_by": to_oid(admin_id)}},
     )
-    conn.commit()
-    return get_static_page(database_path, slug)
+    return await get_static_page(slug)

@@ -14,9 +14,9 @@ const FALLBACK_AVATAR = '/not-image.png'
 
 type CommentCardProps = {
 	comment: AnimeComment
-	onDelete: (commentId: number) => Promise<void>
-	onEdit: (commentId: number, text: string) => Promise<void>
-	onReply: (parentId: number, text: string) => Promise<void>
+	onDelete: (commentId: string) => Promise<void>
+	onEdit: (commentId: string, text: string) => Promise<void>
+	onReply: (parentId: string, text: string) => Promise<void>
 	/** Rendered replies (one level deep). */
 	children?: ReactNode
 }

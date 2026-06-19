@@ -4,13 +4,10 @@ from src.db.anime_catalog_lookup import (
 )
 
 
-def enrich_related_from_catalog(
-    database_path: str,
-    related_items: list[dict],
-) -> list[dict]:
+async def enrich_related_from_catalog(related_items: list[dict]) -> list[dict]:
     """Return only related anime that exist in the local catalog."""
     ids = [int(item.get("id") or 0) for item in related_items]
-    local_by_id = get_anime_catalog_by_ids(database_path, ids)
+    local_by_id = await get_anime_catalog_by_ids(ids)
     enriched: list[dict] = []
     for item in related_items:
         local = local_by_id.get(int(item.get("id") or 0))
@@ -31,16 +28,15 @@ def enrich_related_from_catalog(
     return enriched
 
 
-def merge_related_with_catalog_family(
-    database_path: str,
+async def merge_related_with_catalog_family(
     anime_id: int,
     related_items: list[dict],
 ) -> list[dict]:
     """Add same-family catalog rows when Shikimori related cache is missing."""
-    result = enrich_related_from_catalog(database_path, related_items)
+    result = await enrich_related_from_catalog(related_items)
     seen_ids = {int(item.get("id") or 0) for item in result}
 
-    for local in get_anime_catalog_title_family(database_path, anime_id):
+    for local in await get_anime_catalog_title_family(anime_id):
         local_id = int(local.get("id") or 0)
         if not local_id or local_id in seen_ids:
             continue

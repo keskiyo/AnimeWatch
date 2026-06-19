@@ -58,7 +58,7 @@ class SettingsRequest(RequestModel):
 
 class CommentRequest(RequestModel):
     text: str = Field(min_length=1, max_length=2000)
-    parent_id: int | None = Field(default=None, gt=0)
+    parent_id: str | None = Field(default=None, min_length=1, max_length=64)
 
     @field_validator("text")
     @classmethod

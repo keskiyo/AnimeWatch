@@ -28,7 +28,7 @@ export async function getAdminUsers(
 }
 
 export async function resetAdminUserPassword(
-	userId: number,
+	userId: string,
 	password: string,
 ): Promise<void> {
 	await apiClient.post(
@@ -47,7 +47,7 @@ export async function getAdminAudit(page = 1, limit = 20): Promise<AdminAuditRes
 }
 
 export async function updateAdminUserRole(
-	userId: number,
+	userId: string,
 	role: AdminUser['role'],
 ): Promise<AdminUser> {
 	const response = await apiClient.patch<AdminUser>(
@@ -59,7 +59,7 @@ export async function updateAdminUserRole(
 }
 
 export async function updateAdminUserBlocked(
-	userId: number,
+	userId: string,
 	isBlocked: boolean,
 ): Promise<AdminUser> {
 	const response = await apiClient.patch<AdminUser>(
@@ -88,7 +88,7 @@ export async function getAdminComments(
 	return response.data
 }
 
-export async function deleteAdminComment(commentId: number): Promise<void> {
+export async function deleteAdminComment(commentId: string): Promise<void> {
 	await apiClient.delete(`/admin/comments/${commentId}`, {
 		headers: authHeaders(),
 	})

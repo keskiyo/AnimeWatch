@@ -11,8 +11,6 @@ import asyncio
 import json
 import sys
 
-from src.config import get_settings
-from src.db.anime_catalog import ensure_anime_catalog_schema
 from src.db.anime_catalog_queries import get_anime_catalog_stats
 from src.db.sync_state import get_all_sync_state
 from src.logger import configure_logging
@@ -24,11 +22,12 @@ from src.services.shikimori.sync import (
 
 
 def _print_status() -> None:
-    env = get_settings()
-    ensure_anime_catalog_schema(env.database_path)
-    stats = get_anime_catalog_stats(env.database_path)
-    stats["sync_state"] = get_all_sync_state(env.database_path)
-    print(json.dumps(stats, ensure_ascii=False, indent=2))
+    async def _run() -> dict:
+        stats = await get_anime_catalog_stats()
+        stats["sync_state"] = await get_all_sync_state()
+        return stats
+
+    print(json.dumps(asyncio.run(_run()), ensure_ascii=False, indent=2))
 
 
 def main() -> int:

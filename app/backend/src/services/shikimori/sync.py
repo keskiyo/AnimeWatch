@@ -16,16 +16,9 @@ import asyncio
 from datetime import UTC, datetime
 
 from src.config import Settings, get_settings
-from src.db.anime_catalog import (
-    ensure_anime_catalog_schema,
-    upsert_anime_catalog_many,
-)
+from src.db.anime_catalog import upsert_anime_catalog_many
 from src.db.anime_catalog_queries import get_anime_catalog_all
-from src.db.sync_state import (
-    ensure_sync_state_schema,
-    get_sync_state,
-    set_sync_state,
-)
+from src.db.sync_state import get_sync_state, set_sync_state
 from src.logger import get_logger
 from src.models import Anime
 from src.services.shikimori.normalizers import normalize_shikimori_gql_anime
@@ -60,15 +53,12 @@ async def sync_shikimori_catalog_full(
     to_year = to_year or datetime.now(tz=UTC).year
     started_at = datetime.now(tz=UTC).isoformat()
 
-    ensure_anime_catalog_schema(env.database_path)
-    ensure_sync_state_schema(env.database_path)
-
     if _sync_lock.locked():
         log.warning("[sync-full] another sync is already running — skipping")
         return {"status": "already_running"}
 
     async with _sync_lock:
-        set_sync_state(env.database_path, "shikimori_full_sync_status", "running")
+        await set_sync_state("shikimori_full_sync_status", "running")
         log.info("[sync-full] started from_year=%d to_year=%d", from_year, to_year)
 
         ids_found = 0
@@ -107,9 +97,7 @@ async def sync_shikimori_catalog_full(
                 items_saved += saved
                 years_processed += 1
 
-                set_sync_state(
-                    env.database_path, "shikimori_last_synced_year", str(year)
-                )
+                await set_sync_state("shikimori_last_synced_year", str(year))
                 log.info(
                     "[sync-full] year=%d saved=%d total_saved=%d",
                     year,
@@ -117,16 +105,14 @@ async def sync_shikimori_catalog_full(
                     items_saved,
                 )
         except Exception as exc:
-            set_sync_state(env.database_path, "shikimori_last_error", str(exc))
-            set_sync_state(env.database_path, "shikimori_full_sync_status", "failed")
+            await set_sync_state("shikimori_last_error", str(exc))
+            await set_sync_state("shikimori_full_sync_status", "failed")
             log.error("[sync-full] failed: %s", exc)
             raise
 
         completed_at = datetime.now(tz=UTC).isoformat()
-        set_sync_state(
-            env.database_path, "shikimori_full_sync_completed_at", completed_at
-        )
-        set_sync_state(env.database_path, "shikimori_full_sync_status", "completed")
+        await set_sync_state("shikimori_full_sync_completed_at", completed_at)
+        await set_sync_state("shikimori_full_sync_status", "completed")
         log.info("[sync-full] completed total_saved=%d", items_saved)
 
         await _refresh_kodik_flags(env)
@@ -156,15 +142,12 @@ async def sync_shikimori_catalog_recent(
     from_year = min(from_year, to_year)
     started_at = datetime.now(tz=UTC).isoformat()
 
-    ensure_anime_catalog_schema(env.database_path)
-    ensure_sync_state_schema(env.database_path)
-
     if _sync_lock.locked():
         log.warning("[sync-recent] another sync is already running — skipping")
         return {"status": "already_running"}
 
     async with _sync_lock:
-        set_sync_state(env.database_path, "shikimori_recent_sync_status", "running")
+        await set_sync_state("shikimori_recent_sync_status", "running")
         log.info("[sync-recent] started from_year=%d", from_year)
 
         items_saved = 0
@@ -192,16 +175,14 @@ async def sync_shikimori_catalog_recent(
 
             items_saved = await _fetch_and_save(sorted(all_ids), env)
         except Exception as exc:
-            set_sync_state(env.database_path, "shikimori_last_error", str(exc))
-            set_sync_state(env.database_path, "shikimori_recent_sync_status", "failed")
+            await set_sync_state("shikimori_last_error", str(exc))
+            await set_sync_state("shikimori_recent_sync_status", "failed")
             log.error("[sync-recent] failed: %s", exc)
             raise
 
         completed_at = datetime.now(tz=UTC).isoformat()
-        set_sync_state(
-            env.database_path, "shikimori_recent_sync_completed_at", completed_at
-        )
-        set_sync_state(env.database_path, "shikimori_recent_sync_status", "completed")
+        await set_sync_state("shikimori_recent_sync_completed_at", completed_at)
+        await set_sync_state("shikimori_recent_sync_status", "completed")
         log.info("[sync-recent] completed total_saved=%d", items_saved)
 
         await _refresh_kodik_flags(env)
@@ -243,7 +224,7 @@ async def _fetch_and_save(ids: list[int], env: Settings) -> int:
                 items.append(normalize_shikimori_gql_anime(raw, now_iso))
             except Exception:
                 continue
-        saved += upsert_anime_catalog_many(env.database_path, items)
+        saved += await upsert_anime_catalog_many(items)
     return saved
 
 
@@ -254,9 +235,8 @@ async def maybe_start_daily_recent_sync(settings: Settings | None = None) -> Non
     """If the last recent sync is older than 24 hours (or missing), run one in
     the background. Never blocks startup, never starts a second sync."""
     env = settings or get_settings()
-    ensure_sync_state_schema(env.database_path)
 
-    last = get_sync_state(env.database_path, "shikimori_recent_sync_completed_at")
+    last = await get_sync_state("shikimori_recent_sync_completed_at")
     if last:
         try:
             last_dt = datetime.fromisoformat(last)
@@ -295,9 +275,8 @@ async def fetch_shikimori_bulk_catalog(settings: Settings | None = None) -> list
       - otherwise → empty list (run the sync first).
     """
     env = settings or get_settings()
-    ensure_anime_catalog_schema(env.database_path)
 
-    items = get_anime_catalog_all(env.database_path)
+    items = await get_anime_catalog_all()
     if items:
         return items
 

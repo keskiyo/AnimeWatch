@@ -1,201 +1,174 @@
-"""Read queries over the anime_catalog table: filters, sorting, pages, stats."""
+"""Read queries over the `anime` collection: filters, sorting, pages, stats."""
 
+import re
 from typing import Any
 
-from src.db.anime_catalog import connect, row_to_anime
+from pymongo import ASCENDING, DESCENDING
+
+from src.db.anime_catalog import doc_to_anime
+from src.db.mongo import get_db
 from src.models import Anime
 
-# Catalog sort: ongoing → released → announced
-_STATUS_RANK_SQL = (
-    "CASE status WHEN 'ongoing' THEN 0 WHEN 'released' THEN 1 ELSE 2 END"
-)
+# Hide titles confirmed to have no Kodik dubbing (has_kodik = 0). Missing/null
+# (unchecked) and 1 (available) stay visible; announced titles always visible.
+_KODIK_VISIBLE: dict = {
+    "$or": [{"has_kodik": None}, {"has_kodik": {"$ne": 0}}, {"status": "announced"}]
+}
 
-# Hide titles confirmed to have no Kodik dubbing (has_kodik = 0). Unchecked
-# (NULL) and available (1) stay visible, so the catalog never empties out
-# before the first availability pass runs. Announced titles are always shown —
-# they have no dubbing yet (it appears after release).
-_KODIK_VISIBLE = "(has_kodik IS NULL OR has_kodik != 0 OR status = 'announced')"
+# Default catalog order: ongoing → released → announced, newest, best
+_DEFAULT_SORT = [("status_rank", ASCENDING), ("year", DESCENDING), ("rating", DESCENDING)]
 
-_SORTS: dict[str, str] = {
-    "rating": "rating",
-    "popularity": "score_count",
-    "novelty": "year",
-    "startDate": "year",
-    "title": "title_ru COLLATE NOCASE",
-    "date": "id",
-    "createdAt": "id",
+# List/card views don't need detail-only fields — exclude them so /anime/bulk
+# stays light (description + detail payloads load via /animes/{id}).
+_LIGHT_PROJECTION = {
+    "description": 0,
+    "screenshots": 0,
+    "directors": 0,
+    "authors": 0,
+    "characters": 0,
+    "source": 0,
+    "detailed_at": 0,
+    "synced_at": 0,
+    "has_kodik_checked_at": 0,
 }
 
 
-def get_anime_catalog_by_id(database_path: str, anime_id: int) -> Anime | None:
-    row = connect(database_path).execute(
-        "SELECT * FROM anime_catalog WHERE id = ?", (anime_id,)
-    ).fetchone()
-    return row_to_anime(row) if row else None
+async def get_anime_catalog_by_id(anime_id: int) -> Anime | None:
+    doc = await get_db().anime.find_one({"_id": int(anime_id)})
+    return doc_to_anime(doc) if doc else None
 
 
-def get_anime_catalog_all(database_path: str) -> list[Anime]:
-    """Full catalog in default order: ongoing → released → announced, year desc."""
-    rows = connect(database_path).execute(
-        f"SELECT * FROM anime_catalog WHERE {_KODIK_VISIBLE} "
-        f"ORDER BY {_STATUS_RANK_SQL}, year DESC, rating DESC"
-    ).fetchall()
-    return [row_to_anime(row) for row in rows]
+async def get_anime_catalog_all() -> list[Anime]:
+    """Full visible catalog in default order (light projection — list/card view)."""
+    cursor = (
+        get_db().anime.find(_KODIK_VISIBLE, _LIGHT_PROJECTION).sort(_DEFAULT_SORT)
+    )
+    return [doc_to_anime(doc) async for doc in cursor]
 
 
-def get_sitemap_rows(database_path: str) -> list[dict]:
+async def get_sitemap_rows() -> list[dict]:
     """Lightweight rows for the sitemap: id + best title + last update."""
-    rows = connect(database_path).execute(
-        "SELECT id, title_ru, title_en, updated_at FROM anime_catalog "
-        f"WHERE {_KODIK_VISIBLE} ORDER BY {_STATUS_RANK_SQL}, year DESC"
-    ).fetchall()
+    cursor = get_db().anime.find(
+        _KODIK_VISIBLE,
+        {"title_ru": 1, "title_en": 1, "updated_at": 1},
+    ).sort(_DEFAULT_SORT)
     return [
         {
-            "id": row["id"],
-            # romaji/English first — matches the canonical slug the SPA builds
-            "title": row["title_en"] or row["title_ru"] or "",
-            "updated_at": row["updated_at"] or "",
+            "id": doc["_id"],
+            "title": doc.get("title_en") or doc.get("title_ru") or "",
+            "updated_at": doc.get("updated_at") or "",
         }
-        for row in rows
+        async for doc in cursor
     ]
 
 
-def get_anime_catalog_count(
-    database_path: str, query: dict[str, str | None]
-) -> int:
-    where_sql, args = _build_filters(query)
-    row = connect(database_path).execute(
-        f"SELECT COUNT(*) FROM anime_catalog{where_sql}", args
-    ).fetchone()
-    return int(row[0]) if row else 0
+async def get_anime_catalog_count(query: dict[str, str | None]) -> int:
+    return int(await get_db().anime.count_documents(_build_filter(query)))
 
 
-def get_anime_catalog_page(
-    database_path: str, query: dict[str, str | None]
-) -> dict:
-    where_sql, args = _build_filters(query)
-    order_sql = _order_clause(query)
-
+async def get_anime_catalog_page(query: dict[str, str | None]) -> dict:
+    filt = _build_filter(query)
+    sort, collation = _sort_spec(query)
     page = max(_to_int(query.get("page")) or 1, 1)
     limit = min(max(_to_int(query.get("limit")) or 24, 1), 100)
-    offset = (page - 1) * limit
 
-    total = get_anime_catalog_count(database_path, query)
-    rows = connect(database_path).execute(
-        f"SELECT * FROM anime_catalog{where_sql}{order_sql} LIMIT ? OFFSET ?",
-        [*args, limit, offset],
-    ).fetchall()
-
-    return {
-        "data": [row_to_anime(row) for row in rows],
-        "total": total,
-        "page": page,
-    }
-
-
-def get_anime_catalog_stats(database_path: str) -> dict:
-    conn = connect(database_path)
-    count_row = conn.execute("SELECT COUNT(*) FROM anime_catalog").fetchone()
-    minmax_row = conn.execute(
-        "SELECT MIN(year), MAX(year) FROM anime_catalog WHERE year > 0"
-    ).fetchone()
-    by_year_rows = conn.execute(
-        "SELECT year, COUNT(*) FROM anime_catalog GROUP BY year ORDER BY year"
-    ).fetchall()
-    return {
-        "count": int(count_row[0]) if count_row else 0,
-        "min_year": minmax_row[0] if minmax_row else None,
-        "max_year": minmax_row[1] if minmax_row else None,
-        "by_year": {str(row[0]): row[1] for row in by_year_rows},
-    }
-
-
-# ── Filter / order builders ───────────────────────────────────────────────────
-
-
-def _build_filters(query: dict[str, str | None]) -> tuple[str, list[Any]]:
-    where: list[str] = []
-    args: list[Any] = []
-
-    search = (query.get("search") or "").strip().lower()
-    if search:
-        like = f"%{search}%"
-        where.append(
-            "(LOWER(title_ru) LIKE ? OR LOWER(title_en) LIKE ? OR LOWER(title_jp) LIKE ?)"
-        )
-        args.extend([like, like, like])
-
-    statuses = _split(query.get("status"))
-    if statuses:
-        where.append(f"status IN ({_marks(statuses)})")
-        args.extend(statuses)
-
-    types = _split(query.get("type"))
-    if types:
-        where.append(f"type IN ({_marks(types)})")
-        args.extend(types)
-
-    seasons = _split(query.get("season"))
-    if seasons:
-        where.append(f"season IN ({_marks(seasons)})")
-        args.extend(seasons)
-
-    year_from = _to_int(query.get("year_from") or query.get("yearFrom"))
-    if year_from:
-        where.append("year >= ?")
-        args.append(year_from)
-
-    year_to = _to_int(query.get("year_to") or query.get("yearTo"))
-    if year_to:
-        where.append("year <= ?")
-        args.append(year_to)
-
-    ratings = _split(query.get("age_rating"))
-    if ratings:
-        where.append(f"rating_mpaa IN ({_marks(ratings)})")
-        args.extend(ratings)
-
-    # genres_json holds a JSON array — match any of the requested genres
-    genres = _split(query.get("genres") or query.get("genre"))
-    if genres:
-        genre_clauses = []
-        for genre in genres:
-            genre_clauses.append("genres_json LIKE ?")
-            args.append(f'%"{genre}"%')
-        where.append("(" + " OR ".join(genre_clauses) + ")")
-
-    # Always hide confirmed-no-Kodik titles from listings/search/pages
-    where.append(_KODIK_VISIBLE)
-
-    return " WHERE " + " AND ".join(where), args
-
-
-def _order_clause(query: dict[str, str | None]) -> str:
-    sort = str(query.get("sort") or "")
-    direction = (
-        "ASC" if (query.get("direction") or query.get("order")) == "asc" else "DESC"
+    total = await get_db().anime.count_documents(filt)
+    cursor = (
+        get_db()
+        .anime.find(filt, _LIGHT_PROJECTION)
+        .sort(sort)
+        .skip((page - 1) * limit)
+        .limit(limit)
     )
+    if collation:
+        cursor = cursor.collation(collation)
+    data = [doc_to_anime(doc) async for doc in cursor]
+    return {"data": data, "total": int(total), "page": page}
 
-    column = _SORTS.get(sort)
-    if column is None:
-        # Default: ongoing first, newest first, best first
-        return f" ORDER BY {_STATUS_RANK_SQL}, year DESC, rating DESC"
-    if sort == "title":
-        # Titles read naturally A→Z unless asc/desc is flipped explicitly
-        return f" ORDER BY {column} {'ASC' if direction == 'DESC' else 'DESC'}"
+
+async def get_anime_catalog_stats() -> dict:
+    coll = get_db().anime
+    count = await coll.count_documents({})
+    minmax = await coll.aggregate(
+        [
+            {"$match": {"year": {"$gt": 0}}},
+            {"$group": {"_id": None, "min": {"$min": "$year"}, "max": {"$max": "$year"}}},
+        ]
+    ).to_list(1)
+    by_year_rows = await coll.aggregate(
+        [{"$group": {"_id": "$year", "n": {"$sum": 1}}}, {"$sort": {"_id": 1}}]
+    ).to_list(None)
+    mm = minmax[0] if minmax else {}
+    return {
+        "count": int(count),
+        "min_year": mm.get("min"),
+        "max_year": mm.get("max"),
+        "by_year": {str(r["_id"]): r["n"] for r in by_year_rows},
+    }
+
+
+# ── Filter / sort builders ─────────────────────────────────────────────────────
+
+
+def _build_filter(query: dict[str, str | None]) -> dict:
+    clauses: list[dict] = []
+
+    search = (query.get("search") or "").strip()
+    if search:
+        rx = {"$regex": re.escape(search), "$options": "i"}
+        clauses.append(
+            {"$or": [{"title_ru": rx}, {"title_en": rx}, {"title_jp": rx}]}
+        )
+
+    if statuses := _split(query.get("status")):
+        clauses.append({"status": {"$in": statuses}})
+    if types := _split(query.get("type")):
+        clauses.append({"type": {"$in": types}})
+    if seasons := _split(query.get("season")):
+        clauses.append({"season": {"$in": seasons}})
+    if ratings := _split(query.get("age_rating")):
+        clauses.append({"rating_mpaa": {"$in": ratings}})
+    if genres := _split(query.get("genres") or query.get("genre")):
+        clauses.append({"genres": {"$in": genres}})
+
+    year: dict[str, int] = {}
+    if (yf := _to_int(query.get("year_from") or query.get("yearFrom"))) is not None:
+        year["$gte"] = yf
+    if (yt := _to_int(query.get("year_to") or query.get("yearTo"))) is not None:
+        year["$lte"] = yt
+    if year:
+        clauses.append({"year": year})
+
+    clauses.append(_KODIK_VISIBLE)  # always hide confirmed-no-Kodik
+    return {"$and": clauses}
+
+
+def _sort_spec(query: dict[str, str | None]) -> tuple[list, dict | None]:
+    sort = str(query.get("sort") or "")
+    desc = (query.get("direction") or query.get("order")) != "asc"
+    d = DESCENDING if desc else ASCENDING
+
+    if sort == "rating":
+        return [("rating", d)], None
+    if sort == "popularity":
+        return [("score_count", d)], None
     if sort in ("novelty", "startDate"):
-        return f" ORDER BY year {direction}, id {direction}"
-    return f" ORDER BY {column} {direction}"
+        return [("year", d), ("_id", d)], None
+    if sort in ("date", "createdAt"):
+        return [("_id", d)], None
+    if sort == "title":
+        # Titles read A→Z by default; collation gives case-insensitive order
+        return [("title_ru", ASCENDING if desc else DESCENDING)], {
+            "locale": "en",
+            "strength": 2,
+        }
+    return _DEFAULT_SORT, None
 
 
 def _split(value: str | None) -> list[str]:
     if not value:
         return []
     return [v.strip() for v in value.split(",") if v.strip()]
-
-
-def _marks(values: list) -> str:
-    return ",".join("?" * len(values))
 
 
 def _to_int(value: str | None) -> int | None:

@@ -35,7 +35,7 @@ async def fetch_yummyanime_description(
     Returns empty string if not found or on error (cached to avoid hammering).
     """
     cache_key = f"yummyanime:desc:{shikimori_id}"
-    cached = cache.get_json(cache_key)
+    cached = await cache.get_json(cache_key)
     if cached is not None and cached[1]:          # (value, is_fresh)
         return cached[0] or ""
 
@@ -47,7 +47,7 @@ async def fetch_yummyanime_description(
     # that as "no description". Cache "" only for a genuine successful miss.
     if result is None:
         return ""
-    cache.set_json(cache_key, result, _CACHE_TTL)
+    await cache.set_json(cache_key, result, _CACHE_TTL)
     return result
 
 

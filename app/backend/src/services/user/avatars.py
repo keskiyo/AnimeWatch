@@ -23,16 +23,16 @@ class AvatarError(Exception):
 
 
 def avatars_dir() -> Path:
-    base = Path(get_settings().database_path).resolve().parent / "avatars"
+    base = Path(get_settings().data_dir).resolve() / "avatars"
     base.mkdir(parents=True, exist_ok=True)
     return base
 
 
-def avatar_path(user_id: int) -> Path:
+def avatar_path(user_id: object) -> Path:
     return avatars_dir() / f"{user_id}.webp"
 
 
-def process_and_save_avatar(user_id: int, raw: bytes) -> str:
+def process_and_save_avatar(user_id: object, raw: bytes) -> str:
     """Validate, center-crop to a square, resize to 256px, save as WEBP.
 
     Returns the public URL (with a cache-busting version) for users.avatar_url.

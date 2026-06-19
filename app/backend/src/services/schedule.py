@@ -2,16 +2,12 @@
 
 from datetime import UTC, datetime, timedelta
 
-from src.config import get_settings
 from src.db.anime_catalog_lookup import get_upcoming_anime_from_catalog
 
 
 async def get_schedule(days: int, studio: str | None = None) -> dict[str, list[dict]]:
     limit_days = min(max(days, 1), 30)
-    anime_list = get_upcoming_anime_from_catalog(
-        get_settings().database_path,
-        limit_days,
-    )
+    anime_list = await get_upcoming_anime_from_catalog(limit_days)
 
     now = datetime.now(tz=UTC)
     horizon = now + timedelta(days=limit_days)

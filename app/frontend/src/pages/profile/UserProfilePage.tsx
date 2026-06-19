@@ -17,7 +17,7 @@ type PageState =
 /** Public profile of another user (/profile/:userId). */
 export function UserProfilePage() {
 	const { userId } = useParams()
-	const id = Number(userId)
+	const id = userId ?? ''
 	const { user } = useAuthUser()
 	const navigate = useNavigate()
 	const [state, setState] = useState<PageState>({ status: 'loading' })
@@ -28,7 +28,7 @@ export function UserProfilePage() {
 	}, [user, id, navigate])
 
 	useEffect(() => {
-		if (!Number.isFinite(id) || id <= 0) {
+		if (!id) {
 			setState({ status: 'not-found' })
 			return
 		}

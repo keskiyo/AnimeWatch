@@ -27,7 +27,7 @@ async def fetch_shikimori_anime_by_studio(
         return []
 
     cache_key = f"shikimori:studio:anime:{studio_id}"
-    cached = cache.get_json(cache_key)
+    cached = await cache.get_json(cache_key)
     if cached and cached[1]:
         return cached[0]  # type: ignore[return-value]
 
@@ -73,7 +73,7 @@ async def fetch_shikimori_anime_by_studio(
     items.sort(
         key=lambda a: (0 if a.get("status") == "ongoing" else 1, -(a.get("year") or 0))
     )
-    cache.set_json(cache_key, items, 3600)
+    await cache.set_json(cache_key, items, 3600)
     return items
 
 

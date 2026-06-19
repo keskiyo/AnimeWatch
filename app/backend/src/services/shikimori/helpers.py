@@ -1,20 +1,15 @@
-"""Small pure helpers + the shared SQLite cache accessor."""
+"""Small pure helpers + the shared Mongo cache accessor."""
 
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urljoin
 
-from src.config import Settings
-from src.db.cache import CacheStore
-
-_cache_by_path: dict[str, CacheStore] = {}
+from src.db.cache import CacheStore, get_cache as _get_cache
 
 
-def get_cache(settings: Settings) -> CacheStore:
-    """Return (and lazily create) the shared SQLite CacheStore."""
-    if settings.database_path not in _cache_by_path:
-        _cache_by_path[settings.database_path] = CacheStore(settings.database_path)
-    return _cache_by_path[settings.database_path]
+def get_cache(*_args) -> CacheStore:
+    """Return the shared Mongo CacheStore (any arg is ignored, kept for callers)."""
+    return _get_cache()
 
 
 def split_param(value: str | None) -> list[str]:

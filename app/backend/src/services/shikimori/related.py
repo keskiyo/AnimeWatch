@@ -20,13 +20,13 @@ async def fetch_shikimori_related(
     cache = get_cache(env)
     key = f"shikimori:anime:related:{anime_id}"
 
-    cached = cache.get_json(key)
+    cached = await cache.get_json(key)
     if cached and cached[1]:  # fresh
         return normalize_related(cached[0], env.shikimori_endpoint)
 
     try:
         raw = await fetch_rest_json(f"/api/animes/{anime_id}/related", env)
-        cache.set_json(key, raw, _RELATED_TTL)
+        await cache.set_json(key, raw, _RELATED_TTL)
         return normalize_related(raw, env.shikimori_endpoint)
     except Exception as exc:
         # Shikimori unreachable (e.g. ConnectError) — expired cache beats nothing

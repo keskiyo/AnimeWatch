@@ -31,7 +31,7 @@ async def fetch_shikimori_ongoing(settings: Settings | None = None) -> list[Anim
     env = settings or get_settings()
     cache = get_cache(env)
 
-    cached = cache.get_json(_ONGOING_CACHE_KEY)
+    cached = await cache.get_json(_ONGOING_CACHE_KEY)
     if cached and cached[1]:
         return cached[0]  # type: ignore[return-value]
 
@@ -89,5 +89,5 @@ async def fetch_shikimori_ongoing(settings: Settings | None = None) -> list[Anim
     await enrich_missing_posters(unique, env, cache)
     await enrich_missing_posters_rest(unique, env, cache)
 
-    cache.set_json(_ONGOING_CACHE_KEY, unique, _ONGOING_CACHE_TTL)
+    await cache.set_json(_ONGOING_CACHE_KEY, unique, _ONGOING_CACHE_TTL)
     return unique

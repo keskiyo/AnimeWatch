@@ -1,16 +1,14 @@
 """AnimeWatch API: app assembly (CORS, routers, startup)."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from src.config import get_settings
-from src.db.admin.audit import ensure_admin_audit_schema
-from src.db.anime_catalog import ensure_anime_catalog_schema
-from src.db.static_pages import ensure_static_pages_schema
-from src.db.sync_state import ensure_sync_state_schema
-from src.db.user.comments import ensure_comments_schema
-from src.db.user.users import ensure_users_schema
-from src.db.user.watchlist import ensure_watchlist_schema
+from src.db.indexes import ensure_indexes
+from src.db.mongo import close_client, get_db
 from src.logger import configure_logging, get_logger
 from src.routers.admin.audit import router as admin_audit_router
 from src.routers.admin.comments import router as admin_comments_router
@@ -35,15 +33,30 @@ log = get_logger(__name__)
 
 
 env = get_settings()
-app = FastAPI(title="AnimeWatch API")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    await ensure_indexes(get_db())
+    await seed_admin_user()
+    await maybe_start_daily_recent_sync(env)
+
+    yield
+
+    close_client()
+
+
+app = FastAPI(title="AnimeWatch API", lifespan=lifespan)
+
+# Compress JSON responses (big win for /anime/bulk). ~5–8× on large payloads.
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 
 if not env.kodik_api_key:
     log.warning("KODIK_API_KEY not set — video player will be unavailable")
 
 app.add_middleware(
     CORSMiddleware,
-    # Production origins come from FRONTEND_ORIGINS; the regex only whitelists
-    # the local Vite dev ports (not every localhost port) since credentials are on.
     allow_origins=env.frontend_origins,
     allow_origin_regex=r"^http://(localhost|127\.0\.0\.1):(5173|5174)$",
     allow_credentials=True,
@@ -66,16 +79,3 @@ app.include_router(admin_user_actions_router)
 app.include_router(admin_users_router)
 app.include_router(admin_sync_router)
 app.include_router(internal_catalog_router)
-
-
-@app.on_event("startup")
-async def _startup() -> None:
-    ensure_anime_catalog_schema(env.database_path)
-    ensure_admin_audit_schema(env.database_path)
-    ensure_comments_schema(env.database_path)
-    ensure_static_pages_schema(env.database_path)
-    ensure_sync_state_schema(env.database_path)
-    ensure_users_schema(env.database_path)
-    ensure_watchlist_schema(env.database_path)
-    seed_admin_user()
-    await maybe_start_daily_recent_sync(env)

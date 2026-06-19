@@ -1,7 +1,7 @@
 import type { StaticPage } from '@/types/staticPage'
 
 export type AdminUser = {
-	id: number
+	id: string
 	name: string
 	email: string
 	avatar_url: string
@@ -19,13 +19,13 @@ export type AdminUsersResult = {
 }
 
 export type AdminAuditLog = {
-	id: number
-	admin_user_id: number
+	id: string
+	admin_user_id: string | null
 	admin_name: string | null
 	action: string
 	target_type: string
 	target_id: string
-	metadata_json: string
+	metadata: Record<string, unknown>
 	created_at: string
 }
 
@@ -42,10 +42,10 @@ export type AdminStaticPagesResult = {
 }
 
 export type AdminComment = {
-	id: number
+	id: string
 	anime_id: number
-	parent_id: number | null
-	user_id: number
+	parent_id: string | null
+	user_id: string
 	username: string
 	user_avatar: string
 	anime_title: string

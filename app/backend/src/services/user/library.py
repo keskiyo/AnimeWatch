@@ -1,7 +1,6 @@
-import asyncio
 from datetime import UTC, datetime
 
-from src.config import get_settings
+from src.db.anime_catalog_lookup import get_anime_catalog_by_ids
 from src.db.user.library import LibraryStore
 from src.services.catalog.catalog import get_anime_by_id
 
@@ -17,25 +16,24 @@ DEFAULT_SETTINGS = {
 }
 
 _SETTINGS_KEY = "app_settings"
-_store_by_path: dict[str, LibraryStore] = {}
+_store_instance = LibraryStore()
 
 
 def _store() -> LibraryStore:
-    path = get_settings().database_path
-    if path not in _store_by_path:
-        _store_by_path[path] = LibraryStore(path)
-    return _store_by_path[path]
+    return _store_instance
 
 
 # ── Watchlist ─────────────────────────────────────────────────────────────────
 
 async def get_watchlist() -> list[dict]:
-    items = _store().list_watchlist()
-    animes = await asyncio.gather(
-        *[get_anime_by_id(item["anime_id"]) for item in items]
+    items = await _store().list_watchlist()
+    # One batched query instead of one round-trip per item. visible_only=False:
+    # a saved title stays shown even if hidden from listings (has_kodik=0).
+    by_id = await get_anime_catalog_by_ids(
+        [item["anime_id"] for item in items], visible_only=False
     )
-    for item, anime in zip(items, animes, strict=True):
-        item["anime"] = anime
+    for item in items:
+        item["anime"] = by_id.get(item["anime_id"])
     return items
 
 
@@ -47,7 +45,7 @@ async def upsert_watchlist_item(input_data: dict) -> dict:
     favorite = bool(input_data.get("favorite"))
 
     store = _store()
-    existing = store.get_watchlist_item(anime_id)
+    existing = await store.get_watchlist_item(anime_id)
     item = {
         "anime_id": anime_id,
         "added_at": existing["added_at"] if existing else _now(),
@@ -56,7 +54,7 @@ async def upsert_watchlist_item(input_data: dict) -> dict:
         "notifications_enabled": existing["notifications_enabled"] if existing else True,
         "last_watched_episode": existing["last_watched_episode"] if existing else None,
     }
-    store.upsert_watchlist_item(
+    await store.upsert_watchlist_item(
         anime_id=item["anime_id"],
         added_at=item["added_at"],
         status=item["status"],
@@ -68,18 +66,18 @@ async def upsert_watchlist_item(input_data: dict) -> dict:
     return item
 
 
-def delete_watchlist_item(anime_id: int) -> dict:
-    _store().delete_watchlist_item(anime_id)
+async def delete_watchlist_item(anime_id: int) -> dict:
+    await _store().delete_watchlist_item(anime_id)
     return {"success": True}
 
 
 # ── Progress ──────────────────────────────────────────────────────────────────
 
-def get_progress(anime_id: int) -> list[dict]:
-    return _store().list_progress(anime_id)
+async def get_progress(anime_id: int) -> list[dict]:
+    return await _store().list_progress(anime_id)
 
 
-def upsert_progress(input_data: dict) -> dict:
+async def upsert_progress(input_data: dict) -> dict:
     anime_id = _require_anime_id(input_data)
     episode_number = int(input_data.get("episode_number") or 0)
     if episode_number <= 0:
@@ -88,9 +86,9 @@ def upsert_progress(input_data: dict) -> dict:
     watched_at = _now() if watched else None
 
     store = _store()
-    store.upsert_progress(anime_id, episode_number, watched, watched_at)
+    await store.upsert_progress(anime_id, episode_number, watched, watched_at)
     if watched:
-        store.set_last_watched_episode(anime_id, episode_number)
+        await store.set_last_watched_episode(anime_id, episode_number)
     return {
         "anime_id": anime_id,
         "episode_number": episode_number,
@@ -101,14 +99,14 @@ def upsert_progress(input_data: dict) -> dict:
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 
-def get_app_settings() -> dict:
-    stored = _store().get_value(_SETTINGS_KEY)
+async def get_app_settings() -> dict:
+    stored = await _store().get_value(_SETTINGS_KEY)
     if isinstance(stored, dict):
         return {**DEFAULT_SETTINGS, **stored}
     return dict(DEFAULT_SETTINGS)
 
 
-def merge_settings(input_data: dict) -> dict:
+async def merge_settings(input_data: dict) -> dict:
     merged = {
         "default_player": input_data.get("default_player") if input_data.get("default_player") in ["auto", "kodik"] else "auto",
         "default_quality": input_data.get("default_quality") if input_data.get("default_quality") in ["auto", "360p", "480p", "720p", "1080p"] else "auto",
@@ -117,18 +115,18 @@ def merge_settings(input_data: dict) -> dict:
         "notifications_enabled": input_data.get("notifications_enabled") if isinstance(input_data.get("notifications_enabled"), bool) else True,
         "cache_size_limit": _cache_limit(input_data.get("cache_size_limit")),
     }
-    _store().set_value(_SETTINGS_KEY, merged)
+    await _store().set_value(_SETTINGS_KEY, merged)
     return merged
 
 
 # ── Notifications ─────────────────────────────────────────────────────────────
 
-def get_notifications(unread_only: bool) -> list[dict]:
-    return _store().list_notifications(unread_only)
+async def get_notifications(unread_only: bool) -> list[dict]:
+    return await _store().list_notifications(unread_only)
 
 
-def mark_notification_read(notification_id: str) -> dict:
-    _store().mark_notification_read(notification_id)
+async def mark_notification_read(notification_id: str) -> dict:
+    await _store().mark_notification_read(notification_id)
     return {"success": True}
 
 

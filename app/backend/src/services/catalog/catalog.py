@@ -16,9 +16,9 @@ log = get_logger(__name__)
 
 
 async def get_anime_catalog(query: dict[str, str | None]) -> dict:
-    """Read a filtered catalog page from the local SQLite table."""
+    """Read a filtered catalog page from the local `anime` collection."""
     try:
-        return get_anime_catalog_page(get_settings().database_path, query)
+        return await get_anime_catalog_page(query)
     except Exception as error:
         log.error("catalog query: %s", error)
         raise
@@ -26,10 +26,10 @@ async def get_anime_catalog(query: dict[str, str | None]) -> dict:
 
 async def get_bulk_anime_catalog() -> dict:
     """
-    Return the full catalog from the local anime_catalog table. If the table is
-    empty the response carries needs_sync=true.
+    Return the full catalog from the local `anime` collection. If it is empty the
+    response carries needs_sync=true.
     """
-    items = get_anime_catalog_all(get_settings().database_path)
+    items = await get_anime_catalog_all()
     result = {"data": items, "total": len(items)}
     if not items:
         result["needs_sync"] = True
@@ -44,7 +44,7 @@ async def get_dubbing_anime(translation_id: int) -> dict:
         ids = await get_dubbing_shikimori_ids(translation_id)
         if not ids:
             return {"data": [], "total": 0, "translation_id": translation_id}
-        catalog = get_anime_catalog_all(get_settings().database_path)
+        catalog = await get_anime_catalog_all()
         by_id = {item["id"]: item for item in catalog}
         items = [by_id[i] for i in ids if i in by_id]
         return {"data": items, "total": len(items), "translation_id": translation_id}
@@ -55,19 +55,18 @@ async def get_dubbing_anime(translation_id: int) -> dict:
 
 async def get_studio_anime(studio_name: str) -> dict:
     """Return all anime for a studio from the local catalog."""
-    env = get_settings()
-    items = get_anime_catalog_by_studio(env.database_path, studio_name)
+    items = await get_anime_catalog_by_studio(studio_name)
     return {"data": items, "total": len(items), "studio": studio_name}
 
 
 async def get_anime_related(anime_id: int) -> list[dict]:
     """Return related anime from cache and local catalog, without external calls."""
     env = get_settings()
-    cached = get_cache(env).get_json(f"shikimori:anime:related:{anime_id}")
+    cached = await get_cache().get_json(f"shikimori:anime:related:{anime_id}")
     related = normalize_related(cached[0], env.shikimori_endpoint) if cached else []
-    return merge_related_with_catalog_family(env.database_path, anime_id, related)
+    return await merge_related_with_catalog_family(anime_id, related)
 
 
 async def get_anime_by_id(anime_id: int) -> Anime | None:
-    """Anime detail from the local anime_catalog table only."""
-    return get_anime_catalog_by_id(get_settings().database_path, anime_id)
+    """Anime detail from the local `anime` collection only."""
+    return await get_anime_catalog_by_id(anime_id)

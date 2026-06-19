@@ -1,6 +1,6 @@
-"""Per-user anime category lists."""
+"""Per-user anime category lists. Mongo `watchlist` (one status per user+anime)."""
 
-from src.db.anime_catalog import connect
+from src.db.mongo import get_db, to_oid
 
 VALID_WATCHLIST_STATUSES = {
     "watching",
@@ -10,125 +10,50 @@ VALID_WATCHLIST_STATUSES = {
     "dropped",
 }
 
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS watchlist_categories (
-    user_id INTEGER NOT NULL,
-    anime_id INTEGER NOT NULL,
-    status TEXT NOT NULL,
-    added_at TEXT NOT NULL,
-    PRIMARY KEY (user_id, anime_id, status)
-);
-CREATE INDEX IF NOT EXISTS idx_watchlist_categories_user
-ON watchlist_categories (user_id, added_at DESC);
-"""
-_DEDUP_SQL = """
-DELETE FROM watchlist_categories
-WHERE rowid NOT IN (
-    SELECT MAX(rowid)
-    FROM watchlist_categories
-    GROUP BY user_id, anime_id
-);
-"""
-_UNIQUE_SQL = """
-CREATE UNIQUE INDEX IF NOT EXISTS idx_watchlist_categories_one_status
-ON watchlist_categories (user_id, anime_id);
-"""
+
+def _row(doc: dict) -> dict:
+    return {
+        "user_id": str(doc.get("user_id")),
+        "anime_id": doc.get("anime_id"),
+        "status": doc.get("status"),
+        "added_at": doc.get("added_at"),
+    }
 
 
-def ensure_watchlist_schema(database_path: str) -> None:
-    conn = connect(database_path)
-    conn.executescript(_SCHEMA)
-    conn.execute(_DEDUP_SQL)
-    conn.execute(_UNIQUE_SQL)
-    conn.commit()
+async def list_user_watchlist(user_id: object) -> list[dict]:
+    cursor = (
+        get_db()
+        .watchlist.find({"user_id": to_oid(user_id)})
+        .sort("added_at", -1)
+    )
+    return [_row(doc) async for doc in cursor]
 
 
-def list_user_watchlist(database_path: str, user_id: int) -> list[dict]:
-    rows = connect(database_path).execute(
-        """
-        SELECT user_id, anime_id, status, added_at
-        FROM watchlist_categories
-        WHERE user_id = ?
-        ORDER BY added_at DESC
-        """,
-        (user_id,),
-    ).fetchall()
-    return [_row(row) for row in rows]
+async def list_user_anime_statuses(user_id: object, anime_id: int) -> list[str]:
+    cursor = get_db().watchlist.find(
+        {"user_id": to_oid(user_id), "anime_id": int(anime_id)}
+    )
+    return [doc["status"] async for doc in cursor if doc.get("status")]
 
 
-def list_user_anime_statuses(
-    database_path: str,
-    user_id: int,
-    anime_id: int,
-) -> list[str]:
-    rows = connect(database_path).execute(
-        """
-        SELECT status FROM watchlist_categories
-        WHERE user_id = ? AND anime_id = ?
-        ORDER BY added_at DESC
-        """,
-        (user_id, anime_id),
-    ).fetchall()
-    return [row["status"] for row in rows]
-
-
-def toggle_watchlist_status(
-    database_path: str,
-    user_id: int,
-    anime_id: int,
-    status: str,
-    added_at: str,
+async def toggle_watchlist_status(
+    user_id: object, anime_id: int, status: str, added_at: str
 ) -> bool:
-    conn = connect(database_path)
-    existing = conn.execute(
-        """
-        SELECT 1 FROM watchlist_categories
-        WHERE user_id = ? AND anime_id = ? AND status = ?
-        """,
-        (user_id, anime_id, status),
-    ).fetchone()
-    if existing:
-        conn.execute(
-            """
-            DELETE FROM watchlist_categories WHERE user_id = ? AND anime_id = ?
-            """,
-            (user_id, anime_id),
-        )
-        conn.commit()
+    uid, aid = to_oid(user_id), int(anime_id)
+    coll = get_db().watchlist
+    existing = await coll.find_one({"user_id": uid, "anime_id": aid})
+    if existing and existing.get("status") == status:
+        await coll.delete_one({"user_id": uid, "anime_id": aid})
         return False
-
-    conn.execute(
-        "DELETE FROM watchlist_categories WHERE user_id = ? AND anime_id = ?",
-        (user_id, anime_id),
+    await coll.update_one(
+        {"user_id": uid, "anime_id": aid},
+        {"$set": {"status": status, "added_at": added_at}},
+        upsert=True,
     )
-    conn.execute(
-        """
-        INSERT INTO watchlist_categories (user_id, anime_id, status, added_at)
-        VALUES (?, ?, ?, ?)
-        """,
-        (user_id, anime_id, status, added_at),
-    )
-    conn.commit()
     return True
 
 
-def delete_watchlist_anime(
-    database_path: str,
-    user_id: int,
-    anime_id: int,
-) -> None:
-    conn = connect(database_path)
-    conn.execute(
-        "DELETE FROM watchlist_categories WHERE user_id = ? AND anime_id = ?",
-        (user_id, anime_id),
+async def delete_watchlist_anime(user_id: object, anime_id: int) -> None:
+    await get_db().watchlist.delete_one(
+        {"user_id": to_oid(user_id), "anime_id": int(anime_id)}
     )
-    conn.commit()
-
-
-def _row(row) -> dict:
-    return {
-        "user_id": row["user_id"],
-        "anime_id": row["anime_id"],
-        "status": row["status"],
-        "added_at": row["added_at"],
-    }

@@ -11,7 +11,10 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=False)
 
 @dataclass(frozen=True)
 class Settings:
-    database_path: str
+    mongodb_uri: str
+    mongodb_db: str
+    legacy_sqlite_path: str  # only for the one-time SQLite→Mongo migration script
+    data_dir: str  # local file storage (e.g. uploaded avatars)
     cache_ttl: int
     shikimori_endpoint: str
     shikimori_user_agent: str
@@ -30,7 +33,25 @@ class Settings:
 
 def get_settings() -> Settings:
     return Settings(
-        database_path=environ.get("DATABASE_PATH", str(Path("data") / "animewatch.sqlite")),
+        # Prefer the project's .env names (DB_CONNECTION_STRING_MONGODB / DBNAME_MONGODB);
+        # MONGODB_URI / MONGODB_DB kept as compatibility aliases.
+        mongodb_uri=(
+            environ.get("DB_CONNECTION_STRING_MONGODB")
+            or environ.get("MONGODB_URI")
+            or "mongodb://localhost:27017"
+        ),
+        mongodb_db=(
+            environ.get("DBNAME_MONGODB")
+            or environ.get("MONGODB_DB")
+            or "animewatch"
+        ),
+        # Old SQLite DB for the one-time migration; DATABASE_PATH is the legacy name.
+        legacy_sqlite_path=(
+            environ.get("LEGACY_SQLITE_PATH")
+            or environ.get("DATABASE_PATH")
+            or str(Path("data") / "anime-viewer.db")
+        ),
+        data_dir=environ.get("DATA_DIR") or "data",
         # Support both CACHE_TTL_SECONDS (new) and CACHE_TTL (legacy)
         cache_ttl=_read_int("CACHE_TTL_SECONDS", _read_int("CACHE_TTL", 3600)),
         # Support both SHIKIMORI_ENDPOINT (new) and SHIKIMORI_BASE_URL (legacy)

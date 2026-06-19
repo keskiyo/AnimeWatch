@@ -9,9 +9,9 @@ def _bearer(authorization: str | None) -> str | None:
     return None
 
 
-def require_admin(authorization: str | None = Header(default=None)) -> dict:
+async def require_admin(authorization: str | None = Header(default=None)) -> dict:
     try:
-        user = get_current_user(_bearer(authorization))
+        user = await get_current_user(_bearer(authorization))
     except AuthError as error:
         raise HTTPException(
             status_code=401,

@@ -34,13 +34,10 @@ ALLOWED_PLAYER_HOSTS = {
 }
 KODIK_CACHE_TTL_SECONDS = 900
 
-_cache_by_path: dict[str, CacheStore] = {}
+def default_cache(settings: Settings | None = None) -> CacheStore:
+    from src.db.cache import get_cache
 
-
-def default_cache(settings: Settings) -> CacheStore:
-    if settings.database_path not in _cache_by_path:
-        _cache_by_path[settings.database_path] = CacheStore(settings.database_path)
-    return _cache_by_path[settings.database_path]
+    return get_cache()
 
 
 async def fetch_kodik_search(anime_id: int, settings: Settings) -> dict:

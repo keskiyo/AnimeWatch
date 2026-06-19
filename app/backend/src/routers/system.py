@@ -16,10 +16,9 @@ def health() -> dict:
 
 
 @router.get("/users/{user_id}")
-def public_user_profile(user_id: int) -> dict:
+async def public_user_profile(user_id: str) -> dict:
     """Public profile (no email): name, avatar, role, registration date."""
-    env = get_settings()
-    user = get_user_by_id(env.database_path, user_id)
+    user = await get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     user.pop("email", None)
@@ -27,7 +26,7 @@ def public_user_profile(user_id: int) -> dict:
 
 
 @router.get("/avatars/{user_id}")
-def user_avatar(user_id: int) -> FileResponse:
+def user_avatar(user_id: str) -> FileResponse:
     """Public avatar image (everyone sees it, e.g. next to comments)."""
     path = avatar_path(user_id)
     if not path.is_file():

@@ -2,49 +2,22 @@
 
 from datetime import UTC, datetime
 
-from src.db.anime_catalog import connect
-
-_SYNC_STATE_SCHEMA = """
-CREATE TABLE IF NOT EXISTS sync_state (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-"""
+from src.db.mongo import get_db
 
 
-def ensure_sync_state_schema(database_path: str) -> None:
-    conn = connect(database_path)
-    conn.execute(_SYNC_STATE_SCHEMA)
-    conn.commit()
+async def get_sync_state(key: str) -> str | None:
+    doc = await get_db().sync_state.find_one({"_id": key})
+    return doc.get("value") if doc else None
 
 
-def get_sync_state(database_path: str, key: str) -> str | None:
-    ensure_sync_state_schema(database_path)
-    row = connect(database_path).execute(
-        "SELECT value FROM sync_state WHERE key = ?", (key,)
-    ).fetchone()
-    return row[0] if row else None
-
-
-def set_sync_state(database_path: str, key: str, value: str) -> None:
-    ensure_sync_state_schema(database_path)
-    conn = connect(database_path)
-    conn.execute(
-        """
-        INSERT INTO sync_state (key, value, updated_at) VALUES (?, ?, ?)
-        ON CONFLICT(key) DO UPDATE SET
-            value = excluded.value,
-            updated_at = excluded.updated_at
-        """,
-        (key, value, datetime.now(tz=UTC).isoformat()),
+async def set_sync_state(key: str, value: str) -> None:
+    await get_db().sync_state.update_one(
+        {"_id": key},
+        {"$set": {"value": value, "updated_at": datetime.now(tz=UTC).isoformat()}},
+        upsert=True,
     )
-    conn.commit()
 
 
-def get_all_sync_state(database_path: str) -> dict[str, str]:
-    ensure_sync_state_schema(database_path)
-    rows = connect(database_path).execute(
-        "SELECT key, value FROM sync_state"
-    ).fetchall()
-    return {row[0]: row[1] for row in rows}
+async def get_all_sync_state() -> dict[str, str]:
+    cursor = get_db().sync_state.find({})
+    return {doc["_id"]: doc.get("value", "") async for doc in cursor}

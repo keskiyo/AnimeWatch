@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends
 
-from src.config import get_settings
 from src.db.admin.audit import list_admin_audit_logs
 from src.routers.admin.auth import require_admin
 
@@ -13,4 +12,4 @@ async def admin_audit_log(
     limit: int = 30,
     _admin: dict = Depends(require_admin),
 ) -> dict[str, object]:
-    return list_admin_audit_logs(get_settings().database_path, page, limit)
+    return await list_admin_audit_logs(page, limit)

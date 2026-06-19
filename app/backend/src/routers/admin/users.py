@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from src.config import get_settings
 from src.db.admin.audit import add_admin_audit_log
 from src.db.admin.users import list_admin_users
 from src.db.user.users import get_user_by_id, set_user_password
@@ -11,7 +10,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
 @router.get("/users")
-def admin_users(
+async def admin_users(
     search: str = "",
     role: str = "",
     blocked: str = "",
@@ -19,9 +18,7 @@ def admin_users(
     limit: int = 30,
     _admin: dict = Depends(require_admin),
 ) -> dict:
-    db = get_settings().database_path
-    return list_admin_users(
-        db,
+    return await list_admin_users(
         search=search,
         role=role,
         blocked=blocked,
@@ -31,19 +28,17 @@ def admin_users(
 
 
 @router.post("/users/{user_id}/password")
-def admin_reset_user_password(
-    user_id: int,
+async def admin_reset_user_password(
+    user_id: str,
     body: AdminPasswordResetRequest,
     admin: dict = Depends(require_admin),
 ) -> dict:
-    db = get_settings().database_path
-    if not get_user_by_id(db, user_id):
+    if not await get_user_by_id(user_id):
         raise HTTPException(status_code=404, detail="User was not found")
 
-    set_user_password(db, user_id, body.password)
-    add_admin_audit_log(
-        db,
-        int(admin["id"]),
+    await set_user_password(user_id, body.password)
+    await add_admin_audit_log(
+        admin["id"],
         "user.password_reset",
         "user",
         str(user_id),

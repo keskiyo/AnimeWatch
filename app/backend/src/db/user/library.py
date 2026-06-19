@@ -1,73 +1,30 @@
-import json
-import sqlite3
-from pathlib import Path
+"""Library data (Mongo). GLOBAL (not per-user yet — known debt).
+
+Collections: `library_watchlist` (_id=anime_id), `progress`
+(unique anime_id+episode_number), `app_kv` (_id=key), `notifications` (_id=id).
+"""
+
+from src.db.mongo import get_db
 
 
 class LibraryStore:
-    """SQLite persistence for user library data: watchlist, progress, settings, notifications."""
+    """Mongo persistence for the (global) library: watchlist, progress, settings, notifications."""
 
-    def __init__(self, database_path: str) -> None:
-        if database_path != ":memory:":
-            Path(database_path).resolve().parent.mkdir(parents=True, exist_ok=True)
-
-        self.connection = sqlite3.connect(database_path, check_same_thread=False)
-        self.connection.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS watchlist (
-                anime_id INTEGER PRIMARY KEY,
-                added_at TEXT NOT NULL,
-                status TEXT NOT NULL,
-                favorite INTEGER NOT NULL DEFAULT 0,
-                notifications_enabled INTEGER NOT NULL DEFAULT 1,
-                last_watched_episode INTEGER
-            );
-            CREATE TABLE IF NOT EXISTS progress (
-                anime_id INTEGER NOT NULL,
-                episode_number INTEGER NOT NULL,
-                watched INTEGER NOT NULL DEFAULT 0,
-                watched_at TEXT,
-                PRIMARY KEY (anime_id, episode_number)
-            );
-            CREATE TABLE IF NOT EXISTS app_kv (
-                key TEXT PRIMARY KEY,
-                value_json TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS notifications (
-                id TEXT PRIMARY KEY,
-                anime_id INTEGER NOT NULL,
-                episode_number INTEGER,
-                title TEXT NOT NULL,
-                message TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                read INTEGER NOT NULL DEFAULT 0,
-                type TEXT NOT NULL
-            );
-            """
-        )
-        self.connection.commit()
+    @property
+    def _db(self):
+        return get_db()
 
     # ── Watchlist ─────────────────────────────────────────────────────────────
 
-    def list_watchlist(self) -> list[dict]:
-        rows = self.connection.execute(
-            """
-            SELECT anime_id, added_at, status, favorite, notifications_enabled, last_watched_episode
-            FROM watchlist ORDER BY added_at DESC
-            """
-        ).fetchall()
-        return [self._watchlist_row(row) for row in rows]
+    async def list_watchlist(self) -> list[dict]:
+        cursor = self._db.library_watchlist.find({}).sort("added_at", -1)
+        return [self._watchlist_row(doc) async for doc in cursor]
 
-    def get_watchlist_item(self, anime_id: int) -> dict | None:
-        row = self.connection.execute(
-            """
-            SELECT anime_id, added_at, status, favorite, notifications_enabled, last_watched_episode
-            FROM watchlist WHERE anime_id = ?
-            """,
-            (anime_id,),
-        ).fetchone()
-        return self._watchlist_row(row) if row else None
+    async def get_watchlist_item(self, anime_id: int) -> dict | None:
+        doc = await self._db.library_watchlist.find_one({"_id": int(anime_id)})
+        return self._watchlist_row(doc) if doc else None
 
-    def upsert_watchlist_item(
+    async def upsert_watchlist_item(
         self,
         anime_id: int,
         added_at: str,
@@ -76,133 +33,100 @@ class LibraryStore:
         notifications_enabled: bool,
         last_watched_episode: int | None,
     ) -> None:
-        self.connection.execute(
-            """
-            INSERT INTO watchlist (anime_id, added_at, status, favorite, notifications_enabled, last_watched_episode)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(anime_id) DO UPDATE SET
-                status = excluded.status,
-                favorite = excluded.favorite,
-                notifications_enabled = excluded.notifications_enabled,
-                last_watched_episode = excluded.last_watched_episode
-            """,
-            (anime_id, added_at, status, int(favorite), int(notifications_enabled), last_watched_episode),
+        await self._db.library_watchlist.update_one(
+            {"_id": int(anime_id)},
+            {
+                "$set": {
+                    "added_at": added_at,
+                    "status": status,
+                    "favorite": bool(favorite),
+                    "notifications_enabled": bool(notifications_enabled),
+                    "last_watched_episode": last_watched_episode,
+                }
+            },
+            upsert=True,
         )
-        self.connection.commit()
 
-    def delete_watchlist_item(self, anime_id: int) -> None:
-        self.connection.execute("DELETE FROM watchlist WHERE anime_id = ?", (anime_id,))
-        self.connection.commit()
+    async def delete_watchlist_item(self, anime_id: int) -> None:
+        await self._db.library_watchlist.delete_one({"_id": int(anime_id)})
 
-    def set_last_watched_episode(self, anime_id: int, episode_number: int) -> None:
-        self.connection.execute(
-            """
-            UPDATE watchlist
-            SET last_watched_episode = MAX(COALESCE(last_watched_episode, 0), ?)
-            WHERE anime_id = ?
-            """,
-            (episode_number, anime_id),
+    async def set_last_watched_episode(self, anime_id: int, episode_number: int) -> None:
+        doc = await self._db.library_watchlist.find_one({"_id": int(anime_id)})
+        current = (doc or {}).get("last_watched_episode") or 0
+        await self._db.library_watchlist.update_one(
+            {"_id": int(anime_id)},
+            {"$set": {"last_watched_episode": max(current, int(episode_number))}},
         )
-        self.connection.commit()
 
     # ── Progress ──────────────────────────────────────────────────────────────
 
-    def list_progress(self, anime_id: int) -> list[dict]:
-        rows = self.connection.execute(
-            """
-            SELECT anime_id, episode_number, watched, watched_at
-            FROM progress WHERE anime_id = ? ORDER BY episode_number
-            """,
-            (anime_id,),
-        ).fetchall()
+    async def list_progress(self, anime_id: int) -> list[dict]:
+        cursor = self._db.progress.find({"anime_id": int(anime_id)}).sort(
+            "episode_number", 1
+        )
         return [
             {
-                "anime_id": row[0],
-                "episode_number": row[1],
-                "watched": bool(row[2]),
-                "watched_at": row[3],
+                "anime_id": doc["anime_id"],
+                "episode_number": doc["episode_number"],
+                "watched": bool(doc.get("watched")),
+                "watched_at": doc.get("watched_at"),
             }
-            for row in rows
+            async for doc in cursor
         ]
 
-    def upsert_progress(
+    async def upsert_progress(
         self, anime_id: int, episode_number: int, watched: bool, watched_at: str | None
     ) -> None:
-        self.connection.execute(
-            """
-            INSERT INTO progress (anime_id, episode_number, watched, watched_at)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(anime_id, episode_number) DO UPDATE SET
-                watched = excluded.watched,
-                watched_at = excluded.watched_at
-            """,
-            (anime_id, episode_number, int(watched), watched_at),
+        await self._db.progress.update_one(
+            {"anime_id": int(anime_id), "episode_number": int(episode_number)},
+            {"$set": {"watched": bool(watched), "watched_at": watched_at}},
+            upsert=True,
         )
-        self.connection.commit()
 
     # ── Key-value (settings) ──────────────────────────────────────────────────
 
-    def get_value(self, key: str) -> object | None:
-        row = self.connection.execute(
-            "SELECT value_json FROM app_kv WHERE key = ?", (key,)
-        ).fetchone()
-        if row is None:
-            return None
-        try:
-            return json.loads(row[0])
-        except json.JSONDecodeError:
-            return None
+    async def get_value(self, key: str) -> object | None:
+        doc = await self._db.app_kv.find_one({"_id": key})
+        return doc.get("value") if doc else None
 
-    def set_value(self, key: str, value: object) -> None:
-        self.connection.execute(
-            """
-            INSERT INTO app_kv (key, value_json) VALUES (?, ?)
-            ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json
-            """,
-            (key, json.dumps(value)),
+    async def set_value(self, key: str, value: object) -> None:
+        await self._db.app_kv.update_one(
+            {"_id": key}, {"$set": {"value": value}}, upsert=True
         )
-        self.connection.commit()
 
     # ── Notifications ─────────────────────────────────────────────────────────
 
-    def list_notifications(self, unread_only: bool) -> list[dict]:
-        sql = """
-            SELECT id, anime_id, episode_number, title, message, created_at, read, type
-            FROM notifications
-        """
-        if unread_only:
-            sql += " WHERE read = 0"
-        sql += " ORDER BY created_at DESC"
-        rows = self.connection.execute(sql).fetchall()
+    async def list_notifications(self, unread_only: bool) -> list[dict]:
+        query = {"read": 0} if unread_only else {}
+        cursor = self._db.notifications.find(query).sort("created_at", -1)
         return [
             {
-                "id": row[0],
-                "anime_id": row[1],
-                "episode_number": row[2],
-                "title": row[3],
-                "message": row[4],
-                "created_at": row[5],
-                "read": bool(row[6]),
-                "type": row[7],
+                "id": doc["_id"],
+                "anime_id": doc.get("anime_id"),
+                "episode_number": doc.get("episode_number"),
+                "title": doc.get("title", ""),
+                "message": doc.get("message", ""),
+                "created_at": doc.get("created_at", ""),
+                "read": bool(doc.get("read")),
+                "type": doc.get("type", ""),
             }
-            for row in rows
+            async for doc in cursor
         ]
 
-    def mark_notification_read(self, notification_id: str) -> None:
-        self.connection.execute(
-            "UPDATE notifications SET read = 1 WHERE id = ?", (notification_id,)
+    async def mark_notification_read(self, notification_id: str) -> None:
+        await self._db.notifications.update_one(
+            {"_id": notification_id}, {"$set": {"read": 1}}
         )
-        self.connection.commit()
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _watchlist_row(row: tuple) -> dict:
+    def _watchlist_row(doc: dict) -> dict:
         return {
-            "anime_id": row[0],
-            "added_at": row[1],
-            "status": row[2],
-            "favorite": bool(row[3]),
-            "notifications_enabled": bool(row[4]),
-            "last_watched_episode": row[5],
+            "anime_id": doc["_id"],
+            "added_at": doc.get("added_at", ""),
+            "status": doc.get("status", ""),
+            "favorite": bool(doc.get("favorite")),
+            "notifications_enabled": bool(doc.get("notifications_enabled")),
+            "last_watched_episode": doc.get("last_watched_episode"),
         }

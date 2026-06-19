@@ -42,7 +42,7 @@
 - `home/HomePage.tsx` — главная: rail новых аниме и SEO-текст.
 - `anime/CatalogPage.tsx` — общий каталог.
 - `anime/CatalogOngoing.tsx` — страница ongoing.
-- `anime/AnimePage.tsx` — detail page; сначала показывает SQLite detail, затем
+- `anime/AnimePage.tsx` — detail page; сначала показывает detail из Mongo, затем
   догружает player/related.
 - `studio/StudioPage.tsx` — список аниме студии.
 - `dubbing/DubbingPage.tsx` — список по озвучке.
@@ -51,7 +51,7 @@
 - `admin/AdminPage.tsx` — админ-панель (вкладки: пользователи, страницы,
   журнал; доступ только админу).
 - `footer/*` — статические страницы agreement/privacy/copyright (контент из
-  SQLite через `pagesApi`).
+  Mongo через `pagesApi`).
 - `not-found/NotFoundPage.tsx` — 404.
 
 ## `src/components/`
@@ -159,7 +159,7 @@
 
 1. `useAnimeCache` грузит `/anime/bulk` один раз за JS-сессию.
 2. Каталог, ongoing, поиск и карточки фильтруются на клиенте из cache.
-3. Detail page получает `/animes/:id` из SQLite-backed backend.
+3. Detail page получает `/animes/:id` из Mongo-backed backend.
 4. Плеер Kodik догружается отдельно и не должен блокировать hero/detail.
 5. Toast показывается через `utils/notify.ts`; позиция задаётся в `App.tsx`.
 

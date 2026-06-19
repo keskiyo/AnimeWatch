@@ -6,7 +6,7 @@
 
 Данные: **Shikimori** (каталог, детали, постеры — GraphQL) + **Kodik**
 (плеер, озвучки, названия серий) + **YummyAnime** (запасные описания).
-Каталог хранится в локальной SQLite и не дёргает внешние API при обычной работе.
+Каталог хранится в MongoDB и не дёргает внешние API при обычной работе.
 
 ## Возможности
 
@@ -28,15 +28,21 @@
 
 | Слой     | Технологии                                                 |
 | -------- | ---------------------------------------------------------- |
-| Backend  | Python 3.12+, FastAPI, httpx, SQLite                       |
+| Backend  | Python 3.12+, FastAPI (async), httpx, MongoDB (Motor)      |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, React Router 7 |
 
 ## Быстрый старт
 
+Нужен запущенный MongoDB (локально `mongo:7` через Docker или MongoDB Atlas);
+строка подключения задаётся в `.env` (`MONGODB_URI`, `MONGODB_DB`).
+
 ```bash
+# 0. MongoDB (локально через Docker)
+docker run -d -p 27017:27017 --name animewatch-mongo mongo:7
+
 # 1. Backend (порт 3001)
 cd app/backend
-cp .env.example .env        # заполни KODIK_API_KEY
+cp .env.example .env        # заполни KODIK_API_KEY + MONGODB_URI
 npm run dev
 
 # 2. Первичная загрузка каталога (один раз, ~1–3 часа, можно прервать)
@@ -46,6 +52,10 @@ python -m src.scripts.sync_shikimori full
 cd app/frontend
 npm run dev
 ```
+
+Перенос данных со старой SQLite-базы (если была):
+`python -m src.scripts.migrate_sqlite_to_mongo` (юзеры/комментарии/watchlist/
+страницы/аудит; каталог не переносится — его наполняет ресинк выше).
 
 Каталог наполняется по мере синхронизации; прогресс:
 `python -m src.scripts.sync_shikimori status`. Свежие сезоны и онгоинги

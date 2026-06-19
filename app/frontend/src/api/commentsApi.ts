@@ -21,7 +21,7 @@ export async function getAnimeComments(
 export async function postAnimeComment(
 	animeId: number,
 	text: string,
-	parentId?: number,
+	parentId?: string,
 ): Promise<AnimeComment> {
 	const response = await apiClient.post<AnimeComment>(
 		`/animes/${animeId}/comments`,
@@ -32,7 +32,7 @@ export async function postAnimeComment(
 }
 
 export async function voteAnimeComment(
-	commentId: number,
+	commentId: string,
 	value: 1 | -1 | 0,
 ): Promise<CommentVoteResult> {
 	const response = await apiClient.post<CommentVoteResult>(
@@ -44,7 +44,7 @@ export async function voteAnimeComment(
 }
 
 export async function updateAnimeComment(
-	commentId: number,
+	commentId: string,
 	text: string,
 ): Promise<AnimeComment> {
 	const response = await apiClient.put<AnimeComment>(
@@ -55,6 +55,6 @@ export async function updateAnimeComment(
 	return response.data
 }
 
-export async function deleteAnimeComment(commentId: number): Promise<void> {
+export async function deleteAnimeComment(commentId: string): Promise<void> {
 	await apiClient.delete(`/comments/${commentId}`, { headers: authHeaders() })
 }

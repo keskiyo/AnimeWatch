@@ -14,7 +14,7 @@ export type SignupFormValues = {
 export type SignupFormErrors = Partial<Record<keyof SignupFormValues, string>>
 
 export type AuthUser = {
-	id: number
+	id: string
 	name: string
 	email: string
 	avatar_url: string

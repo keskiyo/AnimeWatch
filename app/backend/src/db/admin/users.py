@@ -1,127 +1,90 @@
+"""Admin user management (Mongo). Operates on the `users` collection."""
+
+import re
 from datetime import UTC, datetime
-from sqlite3 import OperationalError
 from typing import Any
 
-from src.db.anime_catalog import connect
+from src.db.mongo import get_db, to_oid
 
 
-def ensure_admin_user_schema(database_path: str) -> None:
-    conn = connect(database_path)
-    for sql in (
-        "ALTER TABLE users ADD COLUMN is_blocked INTEGER NOT NULL DEFAULT 0",
-        "ALTER TABLE users ADD COLUMN blocked_at TEXT NOT NULL DEFAULT ''",
-        "ALTER TABLE users ADD COLUMN last_seen_at TEXT NOT NULL DEFAULT ''",
-    ):
-        try:
-            conn.execute(sql)
-        except OperationalError as exc:
-            if "duplicate column" not in str(exc).lower():
-                raise
-    conn.commit()
+def _admin_user(doc: dict) -> dict:
+    return {
+        "id": str(doc["_id"]),
+        "name": doc.get("name", ""),
+        "email": doc.get("email", ""),
+        "avatar_url": doc.get("avatar_url", ""),
+        "role": doc.get("role", "user"),
+        "created_at": doc.get("created_at", ""),
+        "is_blocked": int(doc.get("is_blocked", 0)),
+        "blocked_at": doc.get("blocked_at", ""),
+        "last_seen_at": doc.get("last_seen_at", ""),
+    }
 
 
-def list_admin_users(
-    database_path: str,
+async def list_admin_users(
     search: str = "",
     role: str = "",
     blocked: str = "",
     page: int = 1,
     limit: int = 30,
 ) -> dict[str, Any]:
-    ensure_admin_user_schema(database_path)
     safe_page = max(page, 1)
     safe_limit = min(max(limit, 1), 100)
     offset = (safe_page - 1) * safe_limit
-    where_sql, args = _build_filters(search, role, blocked)
-    conn = connect(database_path)
+    query = _build_filter(search, role, blocked)
+    coll = get_db().users
 
-    total_row = conn.execute(f"SELECT COUNT(*) FROM users{where_sql}", args).fetchone()
-    rows = conn.execute(
-        f"""
-        SELECT id, name, email, avatar_url, role, created_at,
-               is_blocked, blocked_at, last_seen_at
-        FROM users{where_sql}
-        ORDER BY id DESC
-        LIMIT ? OFFSET ?
-        """,
-        [*args, safe_limit, offset],
-    ).fetchall()
-
-    return {
-        "data": [dict(row) for row in rows],
-        "total": int(total_row[0]) if total_row else 0,
-        "page": safe_page,
-    }
+    total = await coll.count_documents(query)
+    cursor = coll.find(query).sort("_id", -1).skip(offset).limit(safe_limit)
+    data = [_admin_user(doc) async for doc in cursor]
+    return {"data": data, "total": total, "page": safe_page}
 
 
-def set_admin_user_role(database_path: str, user_id: int, role: str) -> dict | None:
-    ensure_admin_user_schema(database_path)
-    conn = connect(database_path)
-    conn.execute("UPDATE users SET role = ? WHERE id = ?", (role, user_id))
-    conn.commit()
-    return _get_admin_user(database_path, user_id)
+async def set_admin_user_role(user_id: object, role: str) -> dict | None:
+    await get_db().users.update_one({"_id": to_oid(user_id)}, {"$set": {"role": role}})
+    return await _get_admin_user(user_id)
 
 
-def set_admin_user_blocked(
-    database_path: str,
-    user_id: int,
-    is_blocked: bool,
-) -> dict | None:
-    ensure_admin_user_schema(database_path)
+async def set_admin_user_blocked(user_id: object, is_blocked: bool) -> dict | None:
     blocked_at = datetime.now(tz=UTC).isoformat() if is_blocked else ""
-    conn = connect(database_path)
-    conn.execute(
-        "UPDATE users SET is_blocked = ?, blocked_at = ? WHERE id = ?",
-        (int(is_blocked), blocked_at, user_id),
+    await get_db().users.update_one(
+        {"_id": to_oid(user_id)},
+        {"$set": {"is_blocked": int(is_blocked), "blocked_at": blocked_at}},
     )
-    conn.commit()
-    return _get_admin_user(database_path, user_id)
+    return await _get_admin_user(user_id)
 
 
-def is_user_blocked(database_path: str, user_id: int) -> bool:
-    ensure_admin_user_schema(database_path)
-    row = connect(database_path).execute(
-        "SELECT is_blocked FROM users WHERE id = ?",
-        (user_id,),
-    ).fetchone()
-    return bool(row and row["is_blocked"])
-
-
-def touch_user_last_seen(database_path: str, user_id: int) -> None:
-    ensure_admin_user_schema(database_path)
-    connect(database_path).execute(
-        "UPDATE users SET last_seen_at = ? WHERE id = ?",
-        (datetime.now(tz=UTC).isoformat(), user_id),
+async def is_user_blocked(user_id: object) -> bool:
+    doc = await get_db().users.find_one(
+        {"_id": to_oid(user_id)}, {"is_blocked": 1}
     )
-    connect(database_path).commit()
+    return bool(doc and doc.get("is_blocked"))
 
 
-def _get_admin_user(database_path: str, user_id: int) -> dict | None:
-    row = connect(database_path).execute(
-        """
-        SELECT id, name, email, avatar_url, role, created_at,
-               is_blocked, blocked_at, last_seen_at
-        FROM users WHERE id = ?
-        """,
-        (user_id,),
-    ).fetchone()
-    return dict(row) if row else None
+async def touch_user_last_seen(user_id: object) -> None:
+    await get_db().users.update_one(
+        {"_id": to_oid(user_id)},
+        {"$set": {"last_seen_at": datetime.now(tz=UTC).isoformat()}},
+    )
 
 
-def _build_filters(search: str, role: str, blocked: str) -> tuple[str, list[Any]]:
-    clauses: list[str] = []
-    args: list[Any] = []
-    query = search.strip().lower()
+async def _get_admin_user(user_id: object) -> dict | None:
+    doc = await get_db().users.find_one({"_id": to_oid(user_id)})
+    return _admin_user(doc) if doc else None
+
+
+def _build_filter(search: str, role: str, blocked: str) -> dict[str, Any]:
+    clauses: list[dict] = []
+    query = search.strip()
     if query:
-        like = f"%{query}%"
-        clauses.append(
-            "(CAST(id AS TEXT) = ? OR LOWER(name) LIKE ? OR LOWER(email) LIKE ?)"
-        )
-        args.extend([query, like, like])
+        rx = {"$regex": re.escape(query), "$options": "i"}
+        ors: list[dict] = [{"name": rx}, {"email": rx}]
+        oid = to_oid(query)
+        if oid is not None:
+            ors.append({"_id": oid})
+        clauses.append({"$or": ors})
     if role in {"user", "admin"}:
-        clauses.append("role = ?")
-        args.append(role)
+        clauses.append({"role": role})
     if blocked in {"0", "1"}:
-        clauses.append("is_blocked = ?")
-        args.append(int(blocked))
-    return (f" WHERE {' AND '.join(clauses)}" if clauses else "", args)
+        clauses.append({"is_blocked": int(blocked)})
+    return {"$and": clauses} if clauses else {}

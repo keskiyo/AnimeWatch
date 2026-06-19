@@ -1,9 +1,9 @@
 /** Comment as stored/returned by the backend. */
 export type AnimeComment = {
-	id: number
+	id: string
 	anime_id: number
-	user_id: number
-	parent_id?: number | null
+	user_id: string
+	parent_id?: string | null
 	username: string
 	avatar_url: string
 	text: string

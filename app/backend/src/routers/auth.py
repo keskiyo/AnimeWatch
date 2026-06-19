@@ -1,10 +1,7 @@
 """Auth routes: register, login, me, logout, change-password, avatar."""
 
-import asyncio
-
 from fastapi import APIRouter, Header, HTTPException, UploadFile
 
-from src.config import get_settings
 from src.db.user.users import set_user_avatar
 from src.schemas.requests import (
     ChangePasswordRequest,
@@ -48,35 +45,35 @@ def _raise(error: AuthError) -> None:
 
 
 @router.post("/register", status_code=201)
-def register(body: RegisterRequest) -> dict:
+async def register(body: RegisterRequest) -> dict:
     try:
-        return register_user(body.name, body.email, body.password)
+        return await register_user(body.name, body.email, body.password)
     except AuthError as error:
         _raise(error)
         raise
 
 
 @router.post("/login")
-def login(body: LoginRequest) -> dict:
+async def login(body: LoginRequest) -> dict:
     try:
-        return login_user(body.login or body.email or "", body.password)
+        return await login_user(body.login or body.email or "", body.password)
     except AuthError as error:
         _raise(error)
         raise
 
 
 @router.get("/me")
-def me(authorization: str | None = Header(default=None)) -> dict:
+async def me(authorization: str | None = Header(default=None)) -> dict:
     try:
-        return get_current_user(_bearer(authorization))
+        return await get_current_user(_bearer(authorization))
     except AuthError as error:
         _raise(error)
         raise
 
 
 @router.post("/logout")
-def logout(authorization: str | None = Header(default=None)) -> dict:
-    logout_user(_bearer(authorization))
+async def logout(authorization: str | None = Header(default=None)) -> dict:
+    await logout_user(_bearer(authorization))
     return {"success": True}
 
 
@@ -86,7 +83,7 @@ async def upload_avatar(
     authorization: str | None = Header(default=None),
 ) -> dict:
     try:
-        user = get_current_user(_bearer(authorization))
+        user = await get_current_user(_bearer(authorization))
     except AuthError as error:
         _raise(error)
         raise
@@ -97,17 +94,19 @@ async def upload_avatar(
     except AvatarError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
-    await asyncio.to_thread(set_user_avatar, get_settings().database_path, user["id"], avatar_url)
+    await set_user_avatar(user["id"], avatar_url)
     return {"avatar_url": avatar_url}
 
 
 @router.post("/change-password")
-def change_password_route(
+async def change_password_route(
     body: ChangePasswordRequest,
     authorization: str | None = Header(default=None),
 ) -> dict:
     try:
-        change_password(_bearer(authorization), body.old_password, body.new_password)
+        await change_password(
+            _bearer(authorization), body.old_password, body.new_password
+        )
         return {"success": True}
     except AuthError as error:
         _raise(error)
@@ -115,12 +114,12 @@ def change_password_route(
 
 
 @router.patch("/profile")
-def update_profile_route(
+async def update_profile_route(
     body: UpdateProfileRequest,
     authorization: str | None = Header(default=None),
 ) -> dict:
     try:
-        return update_profile(_bearer(authorization), body.name)
+        return await update_profile(_bearer(authorization), body.name)
     except AuthError as error:
         _raise(error)
         raise

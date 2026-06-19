@@ -44,7 +44,7 @@ async def trigger_catalog_refresh(
     _check_token(authorization)
     env = get_settings()
 
-    if is_refresh_running(env.database_path):
+    if await is_refresh_running():
         raise HTTPException(status_code=409, detail="refresh already running")
 
     async def _run() -> None:
@@ -62,4 +62,4 @@ async def catalog_refresh_status(
     authorization: str | None = Header(default=None),
 ) -> dict:
     _check_token(authorization)
-    return get_refresh_status(get_settings().database_path)
+    return await get_refresh_status()

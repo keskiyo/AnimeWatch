@@ -33,7 +33,7 @@ async def legacy_fetch_bulk_from_shikimori(env: Settings) -> list[Anime]:
     """Fetch the 1990+ catalog straight from Shikimori GQL (24h SQLite cache)."""
     cache = get_cache(env)
 
-    cached = cache.get_json(_BULK_CACHE_KEY)
+    cached = await cache.get_json(_BULK_CACHE_KEY)
     if cached and cached[1]:
         return cached[0]  # type: ignore[return-value]
 
@@ -99,5 +99,5 @@ async def legacy_fetch_bulk_from_shikimori(env: Settings) -> list[Anime]:
             -(a.get("year") or 0),
         )
     )
-    cache.set_json(_BULK_CACHE_KEY, unique, _BULK_CACHE_TTL)
+    await cache.set_json(_BULK_CACHE_KEY, unique, _BULK_CACHE_TTL)
     return unique

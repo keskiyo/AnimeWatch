@@ -12,7 +12,7 @@ import { WATCHLIST_LABELS } from '@/utils/watchlist/watchlistData'
 import { useEffect, useMemo, useState } from 'react'
 
 type ProfileWatchlistProps = {
-	userId: number
+	userId: string
 	isOwn?: boolean
 }
 

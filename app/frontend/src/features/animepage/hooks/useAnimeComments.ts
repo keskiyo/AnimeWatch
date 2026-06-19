@@ -38,12 +38,12 @@ export function useAnimeComments(animeId: number) {
 		return { topLevel, repliesByParent }
 	}, [comments])
 
-	async function onReply(parentId: number, text: string) {
+	async function onReply(parentId: string, text: string) {
 		const reply = await postAnimeComment(animeId, text, parentId)
 		setComments(prev => [reply, ...prev])
 	}
 
-	async function onDelete(commentId: number) {
+	async function onDelete(commentId: string) {
 		await deleteAnimeComment(commentId)
 		// Remove the whole subtree (matches the recursive delete on the server).
 		setComments(prev => {
@@ -55,7 +55,7 @@ export function useAnimeComments(animeId: number) {
 		})
 	}
 
-	async function onEdit(commentId: number, text: string) {
+	async function onEdit(commentId: string, text: string) {
 		const updated = await updateAnimeComment(commentId, text)
 		setComments(prev =>
 			prev.map(c => (c.id === commentId ? { ...c, ...updated } : c)),

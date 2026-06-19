@@ -1,39 +1,13 @@
-"""Users + sessions storage. Passwords are scrypt-hashed (stdlib, salted)."""
+"""Users + sessions (Mongo). Passwords are scrypt-hashed (stdlib, salted)."""
 
 import hashlib
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from src.db.anime_catalog import connect
+from src.db.mongo import get_db, to_oid
 
 SESSION_TTL_DAYS = 30
-
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-    password_hash TEXT NOT NULL,
-    avatar_url TEXT NOT NULL DEFAULT '',
-    role TEXT NOT NULL DEFAULT 'user',
-    created_at TEXT NOT NULL
-);
-"""
-
-_SESSIONS_SCHEMA = """
-CREATE TABLE IF NOT EXISTS sessions (
-    token TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    expires_at TEXT NOT NULL
-);
-"""
-
-
-def ensure_users_schema(database_path: str) -> None:
-    conn = connect(database_path)
-    conn.execute(_SCHEMA)
-    conn.execute(_SESSIONS_SCHEMA)
-    conn.commit()
 
 
 # ── Password hashing (scrypt, per-user salt) ─────────────────────────────────
@@ -59,108 +33,103 @@ def verify_password(password: str, stored: str) -> bool:
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 
-def _row_to_user(row) -> dict:
+def _to_user(doc: dict) -> dict:
     return {
-        "id": row["id"],
-        "name": row["name"],
-        "email": row["email"],
-        "avatar_url": row["avatar_url"],
-        "role": row["role"],
-        "created_at": row["created_at"],
+        "id": str(doc["_id"]),
+        "name": doc.get("name", ""),
+        "email": doc.get("email", ""),
+        "avatar_url": doc.get("avatar_url", ""),
+        "role": doc.get("role", "user"),
+        "created_at": doc.get("created_at", ""),
     }
 
 
-def create_user(
-    database_path: str, name: str, email: str, password: str, role: str = "user"
+async def create_user(
+    name: str, email: str, password: str, role: str = "user"
 ) -> dict:
-    conn = connect(database_path)
-    cursor = conn.execute(
-        "INSERT INTO users (name, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)",
-        (name, email, hash_password(password), role, datetime.now(tz=UTC).isoformat()),
-    )
-    conn.commit()
-    return get_user_by_id(database_path, int(cursor.lastrowid or 0))  # type: ignore[return-value]
+    doc = {
+        "name": name,
+        "email": email,
+        "email_lower": email.lower(),
+        "password_hash": hash_password(password),
+        "avatar_url": "",
+        "role": role,
+        "created_at": datetime.now(tz=UTC).isoformat(),
+        "is_blocked": 0,
+        "blocked_at": "",
+        "last_seen_at": "",
+    }
+    result = await get_db().users.insert_one(doc)
+    doc["_id"] = result.inserted_id
+    return _to_user(doc)
 
 
-def get_user_by_id(database_path: str, user_id: int) -> dict | None:
-    row = connect(database_path).execute(
-        "SELECT * FROM users WHERE id = ?", (user_id,)
-    ).fetchone()
-    return _row_to_user(row) if row else None
-
-
-def find_user_by_login(database_path: str, login: str) -> dict | None:
-    """Find a user by email OR name (case-insensitive). Includes password_hash."""
-    row = connect(database_path).execute(
-        "SELECT * FROM users WHERE email = ? COLLATE NOCASE OR name = ? COLLATE NOCASE",
-        (login, login),
-    ).fetchone()
-    if not row:
+async def get_user_by_id(user_id: object) -> dict | None:
+    oid = to_oid(user_id)
+    if oid is None:
         return None
-    user = _row_to_user(row)
-    user["password_hash"] = row["password_hash"]
+    doc = await get_db().users.find_one({"_id": oid})
+    return _to_user(doc) if doc else None
+
+
+async def find_user_by_login(login: str) -> dict | None:
+    """By email OR name (case-insensitive). Includes password_hash."""
+    rx = {"$regex": f"^{re.escape(login)}$", "$options": "i"}
+    doc = await get_db().users.find_one(
+        {"$or": [{"email_lower": login.lower()}, {"name": rx}]}
+    )
+    if not doc:
+        return None
+    user = _to_user(doc)
+    user["password_hash"] = doc.get("password_hash", "")
     return user
 
 
-def email_exists(database_path: str, email: str) -> bool:
-    row = connect(database_path).execute(
-        "SELECT 1 FROM users WHERE email = ? COLLATE NOCASE", (email,)
-    ).fetchone()
-    return row is not None
+async def email_exists(email: str) -> bool:
+    return await get_db().users.find_one({"email_lower": email.lower()}) is not None
 
 
-def set_user_avatar(database_path: str, user_id: int, avatar_url: str) -> None:
-    conn = connect(database_path)
-    conn.execute(
-        "UPDATE users SET avatar_url = ? WHERE id = ?", (avatar_url, user_id)
+async def set_user_avatar(user_id: object, avatar_url: str) -> None:
+    await get_db().users.update_one(
+        {"_id": to_oid(user_id)}, {"$set": {"avatar_url": avatar_url}}
     )
-    conn.commit()
 
 
-def set_user_name(database_path: str, user_id: int, name: str) -> dict | None:
-    conn = connect(database_path)
-    conn.execute("UPDATE users SET name = ? WHERE id = ?", (name, user_id))
-    conn.commit()
-    return get_user_by_id(database_path, user_id)
+async def set_user_name(user_id: object, name: str) -> dict | None:
+    await get_db().users.update_one({"_id": to_oid(user_id)}, {"$set": {"name": name}})
+    return await get_user_by_id(user_id)
 
 
-def set_user_password(database_path: str, user_id: int, password: str) -> None:
-    conn = connect(database_path)
-    conn.execute(
-        "UPDATE users SET password_hash = ? WHERE id = ?",
-        (hash_password(password), user_id),
+async def set_user_password(user_id: object, password: str) -> None:
+    await get_db().users.update_one(
+        {"_id": to_oid(user_id)}, {"$set": {"password_hash": hash_password(password)}}
     )
-    conn.commit()
 
 
-# ── Sessions ──────────────────────────────────────────────────────────────────
+# ── Sessions (TTL index on expires_at auto-removes expired) ─────────────────────
 
 
-def create_session(database_path: str, user_id: int) -> str:
+async def create_session(user_id: object) -> str:
     token = secrets.token_urlsafe(32)
-    expires = datetime.now(tz=UTC) + timedelta(days=SESSION_TTL_DAYS)
-    conn = connect(database_path)
-    conn.execute(
-        "INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
-        (token, user_id, expires.isoformat()),
+    await get_db().sessions.insert_one(
+        {
+            "_id": token,
+            "user_id": to_oid(user_id),
+            "expires_at": datetime.now(tz=UTC) + timedelta(days=SESSION_TTL_DAYS),
+        }
     )
-    conn.commit()
     return token
 
 
-def get_user_by_token(database_path: str, token: str) -> dict | None:
-    row = connect(database_path).execute(
-        "SELECT user_id, expires_at FROM sessions WHERE token = ?", (token,)
-    ).fetchone()
-    if not row:
+async def get_user_by_token(token: str) -> dict | None:
+    doc = await get_db().sessions.find_one({"_id": token})
+    if not doc:
         return None
-    if datetime.fromisoformat(row["expires_at"]) < datetime.now(tz=UTC):
-        delete_session(database_path, token)
+    if doc["expires_at"] < datetime.now(tz=UTC):
+        await delete_session(token)
         return None
-    return get_user_by_id(database_path, row["user_id"])
+    return await get_user_by_id(doc["user_id"])
 
 
-def delete_session(database_path: str, token: str) -> None:
-    conn = connect(database_path)
-    conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
-    conn.commit()
+async def delete_session(token: str) -> None:
+    await get_db().sessions.delete_one({"_id": token})
