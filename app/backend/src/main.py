@@ -19,6 +19,7 @@ from src.routers.admin.users import router as admin_users_router
 from src.routers.anime import router as anime_router
 from src.routers.auth import router as auth_router
 from src.routers.comments import router as comments_router
+from src.routers.frontend_host import router as frontend_host_router
 from src.routers.internal_catalog import router as internal_catalog_router
 from src.routers.library import router as library_router
 from src.routers.player import router as player_router
@@ -79,3 +80,6 @@ app.include_router(admin_user_actions_router)
 app.include_router(admin_users_router)
 app.include_router(admin_sync_router)
 app.include_router(internal_catalog_router)
+
+# SPA host with server-side SEO injection — MUST be last (catch-all `/{path}`).
+app.include_router(frontend_host_router)

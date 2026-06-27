@@ -6,9 +6,10 @@ match the canonical paths the SPA redirects to (one URL per title).
 
 import re
 import unicodedata
+from urllib.parse import quote
 from xml.sax.saxutils import escape
 
-_STATIC_PATHS = ("/", "/anime", "/ongoing")
+_STATIC_PATHS = ("/", "/anime", "/ongoing", "/agreement", "/privacy", "/copyright")
 
 # Cyrillic → Latin. MUST stay identical to frontend utils/animeSlug.ts CYRILLIC.
 _CYRILLIC = {
@@ -24,21 +25,36 @@ def _transliterate(text: str) -> str:
     return "".join(_CYRILLIC.get(ch, ch) for ch in text.lower())
 
 
-def anime_slug(anime_id: int, title: str) -> str:
-    normalized = unicodedata.normalize("NFKD", _transliterate(title or ""))
+def _kebab(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", _transliterate(text or ""))
     normalized = "".join(c for c in normalized if not unicodedata.combining(c))
-    normalized = normalized.lower()
-    normalized = re.sub(r"[^a-z0-9]+", "-", normalized)
-    normalized = re.sub(r"^-+|-+$", "", normalized)
-    normalized = re.sub(r"-{2,}", "-", normalized)
-    return f"{anime_id}-{normalized or 'anime'}"
+    normalized = re.sub(r"[^a-z0-9]+", "-", normalized.lower())
+    return re.sub(r"-{2,}", "-", normalized).strip("-")
 
 
-def build_sitemap(base_url: str, rows: list[dict]) -> str:
+def anime_slug(anime_id: int, title: str) -> str:
+    return f"{anime_id}-{_kebab(title) or 'anime'}"
+
+
+def genre_slug(name: str) -> str:
+    """URL slug for a genre landing page (`/anime/zhanr/<slug>`)."""
+    return _kebab(name) or "anime"
+
+
+def build_sitemap(
+    base_url: str,
+    rows: list[dict],
+    studios: list[str] | None = None,
+    genres: list[str] | None = None,
+) -> str:
     base = base_url.rstrip("/")
     entries: list[str] = []
     for path in _STATIC_PATHS:
         entries.append(_url(f"{base}{path}", None))
+    for genre in genres or []:
+        entries.append(_url(f"{base}/anime/zhanr/{genre_slug(genre)}", None))
+    for studio in studios or []:
+        entries.append(_url(f"{base}/studio/{quote(studio)}", None))
     for row in rows:
         loc = f"{base}/anime/{anime_slug(int(row['id']), row.get('title') or '')}"
         entries.append(_url(loc, _lastmod(row.get("updated_at"))))

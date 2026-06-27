@@ -21,42 +21,73 @@ _SEASON_MAX_PAGES = 40
 
 
 async def fetch_shikimori_ids_by_season(
-    year: int,
-    season: str,
-    settings: Settings,
-    rate_limiter: Throttle,
+    year: int, season: str, settings: Settings, rate_limiter: Throttle
 ) -> list[int]:
-    """Collect all anime ids for a season via REST /api/animes paging."""
+    """Collect all anime ids for a season.
+
+    GraphQL is primary: REST season pages can intermittently return 403 on
+    deeper pages, which used to make the whole season disappear from full sync.
+    """
+    try:
+        return await _fetch_season_ids_gql(year, season, settings, rate_limiter)
+    except Exception as exc:
+        log.warning(
+            "[sync] gql season ids %s_%d failed, falling back to REST: %s",
+            season,
+            year,
+            exc,
+        )
+    return await _fetch_season_ids_rest(year, season, settings, rate_limiter)
+
+
+async def _fetch_season_ids_gql(
+    year: int, season: str, settings: Settings, rate_limiter: Throttle
+) -> list[int]:
     ids: list[int] = []
     page = 1
 
     while page <= _SEASON_MAX_PAGES:
-        await rate_limiter.wait()
-        raw = await fetch_rest_json(
-            "/api/animes",
-            settings,
-            {
-                "season": f"{season}_{year}",
-                "limit": str(_SEASON_PAGE_LIMIT),
-                "page": str(page),
-                "order": "aired_on",
-                "censored": "true",
-            },
+        query = (
+            '{ animes(season: "%s_%d", page: %d, limit: %d, order: aired_on) { id } }'
+            % (season, year, page, _SEASON_PAGE_LIMIT)
         )
+        await rate_limiter.wait()
+        data = await fetch_gql(query, settings)
+        raw_list = (data or {}).get("animes") or []
+        for item in raw_list:
+            try:
+                ids.append(int(item["id"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+        if len(raw_list) < _SEASON_PAGE_LIMIT:
+            break
+        page += 1
+    return sorted(set(ids))
 
+
+async def _fetch_season_ids_rest(
+    year: int, season: str, settings: Settings, rate_limiter: Throttle
+) -> list[int]:
+    ids: list[int] = []
+    page = 1
+    while page <= _SEASON_MAX_PAGES:
+        await rate_limiter.wait()
+        raw = await fetch_rest_json("/api/animes", settings, {
+            "season": f"{season}_{year}",
+            "limit": str(_SEASON_PAGE_LIMIT),
+            "page": str(page),
+            "order": "aired_on",
+            "censored": "true",
+        })
         if not isinstance(raw, list) or not raw:
             break
-
         for item in raw:
             anime_id = item.get("id")
             if anime_id:
                 ids.append(int(anime_id))
-
         if len(raw) < _SEASON_PAGE_LIMIT:
             break
-
         page += 1
-
     return sorted(set(ids))
 
 
@@ -68,9 +99,9 @@ async def fetch_status_ids(
     page = 1
     while page <= _SEASON_MAX_PAGES:
         await rate_limiter.wait()
-        query = '{ animes(status: "%s", order: id_desc, page: %d, limit: 50) { id } }' % (
-            statuses,
-            page,
+        query = (
+            '{ animes(status: "%s", order: id_desc, page: %d, limit: 50) { id } }'
+            % (statuses, page)
         )
         try:
             data = await fetch_gql(query, settings)
@@ -90,9 +121,7 @@ async def fetch_status_ids(
 
 
 async def fetch_shikimori_gql_animes_by_ids(
-    ids: list[int],
-    settings: Settings,
-    rate_limiter: Throttle,
+    ids: list[int], settings: Settings, rate_limiter: Throttle
 ) -> list[dict[str, Any]]:
     """Fetch raw GQL anime objects for the given ids, in batches of 50."""
     raw_items: list[dict[str, Any]] = []

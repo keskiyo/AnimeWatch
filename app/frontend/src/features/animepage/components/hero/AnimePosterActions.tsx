@@ -26,19 +26,13 @@ export function AnimePosterActions({ anime, player }: AnimePosterActionsProps) {
 	return (
 		<div className='w-62.5 shrink-0 max-[760px]:w-full'>
 			<div className='relative flex aspect-2/3 w-full items-end justify-center overflow-hidden rounded-md bg-aw-elevated'>
-				{anime.poster_url ? (
-					<PosterImage
-						className='h-full w-full cursor-zoom-in object-cover transition-opacity hover:opacity-90'
-						url={anime.poster_url}
-						title={anime.title_en || anime.title_ru}
-						loading='eager'
-						onClick={() => setLightboxOpen(true)}
-					/>
-				) : (
-					<span className='relative px-5 pb-8 text-center text-[clamp(34px,6vw,56px)] font-black leading-none text-white/90 [text-shadow:0_8px_24px_rgba(0,0,0,0.5)]'>
-						{anime.title_en.slice(0, 2).toUpperCase()}
-					</span>
-				)}
+				<PosterImage
+					className='h-full w-full cursor-zoom-in object-cover transition-opacity hover:opacity-90'
+					url={anime.poster_url}
+					title={anime.title_en || anime.title_ru}
+					loading='eager'
+					onClick={() => anime.poster_url && setLightboxOpen(true)}
+				/>
 			</div>
 
 			{lightboxOpen && posterSrc && (

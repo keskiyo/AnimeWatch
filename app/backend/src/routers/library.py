@@ -75,31 +75,51 @@ async def watchlist_delete(
 
 
 @router.get("/progress/{anime_id}")
-async def progress_for_anime(anime_id: int) -> list[dict]:
-    return await get_progress(anime_id)
+async def progress_for_anime(
+    anime_id: int, authorization: str | None = Header(default=None)
+) -> list[dict]:
+    user = await _current_user(authorization)
+    return await get_progress(user["id"], anime_id)
 
 
 @router.post("/progress")
-async def progress_upsert(body: ProgressRequest) -> dict:
-    return await upsert_progress(body.model_dump())
+async def progress_upsert(
+    body: ProgressRequest, authorization: str | None = Header(default=None)
+) -> dict:
+    user = await _current_user(authorization)
+    return await upsert_progress(user["id"], body.model_dump())
 
 
 @router.get("/settings")
-async def current_settings() -> dict:
-    return await get_app_settings()
+async def current_settings(
+    authorization: str | None = Header(default=None),
+) -> dict:
+    user = await _current_user(authorization)
+    return await get_app_settings(user["id"])
 
 
 @router.put("/settings")
-async def settings_update(body: SettingsRequest | None = None) -> dict:
+async def settings_update(
+    body: SettingsRequest | None = None,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    user = await _current_user(authorization)
     data = body.model_dump(exclude_unset=True) if body else {}
-    return {"success": True, "settings": await merge_settings(data)}
+    return {"success": True, "settings": await merge_settings(user["id"], data)}
 
 
 @router.get("/notifications")
-async def notifications(unread_only: str | None = None) -> list[dict]:
-    return await get_notifications(unread_only == "true")
+async def notifications(
+    unread_only: str | None = None,
+    authorization: str | None = Header(default=None),
+) -> list[dict]:
+    user = await _current_user(authorization)
+    return await get_notifications(user["id"], unread_only == "true")
 
 
 @router.post("/notifications/{notification_id}/read")
-async def notification_read(notification_id: str) -> dict:
-    return await mark_notification_read(notification_id)
+async def notification_read(
+    notification_id: str, authorization: str | None = Header(default=None)
+) -> dict:
+    user = await _current_user(authorization)
+    return await mark_notification_read(user["id"], notification_id)

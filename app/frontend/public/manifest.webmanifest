@@ -1,0 +1,14 @@
+{
+  "name": "AnimeWatch — смотреть аниме онлайн",
+  "short_name": "AnimeWatch",
+  "description": "Каталог аниме, онгоинги и страницы тайтлов с плеером.",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "icons": [
+    { "src": "/AnimeWatch.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

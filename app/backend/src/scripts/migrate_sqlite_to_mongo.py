@@ -16,6 +16,7 @@ import json
 import sqlite3
 import sys
 from datetime import UTC, datetime
+from pathlib import Path
 
 from bson import ObjectId
 from pymongo import MongoClient
@@ -59,18 +60,31 @@ def _json_or(value: str | None, fallback):
         return fallback
 
 
-def migrate(sqlite_path: str, db) -> dict:
+def migrate(sqlite_path: str, db, avatars_dir: Path) -> dict:
     conn = _connect_sqlite(sqlite_path)
     counts: dict[str, int] = {}
     user_ids: dict[int, ObjectId] = {}
     comment_ids: dict[int, ObjectId] = {}
 
-    # ── users ──────────────────────────────────────────────────────────────
+    # ── users (+ avatar file remap int→ObjectId) ─────────────────────────────
     user_docs = []
+    avatars_remapped = 0
     for row in _rows(conn, "users"):
         oid = ObjectId()
-        user_ids[int(row["id"])] = oid
+        old_id = int(row["id"])
+        user_ids[old_id] = oid
         email = row["email"] or ""
+        # Avatars on disk are named by the OLD int id; rename to the new
+        # ObjectId so /api/avatars/{oid} resolves. Drop stale urls if no file.
+        avatar_url = row["avatar_url"] or ""
+        if avatar_url:
+            src = avatars_dir / f"{old_id}.webp"
+            if src.exists():
+                src.rename(avatars_dir / f"{oid}.webp")
+                avatar_url = f"/api/avatars/{oid}"
+                avatars_remapped += 1
+            else:
+                avatar_url = ""  # file missing → frontend shows fallback
         user_docs.append(
             {
                 "_id": oid,
@@ -78,7 +92,7 @@ def migrate(sqlite_path: str, db) -> dict:
                 "email": email,
                 "email_lower": email.lower(),
                 "password_hash": row["password_hash"] or "",
-                "avatar_url": row["avatar_url"] or "",
+                "avatar_url": avatar_url,
                 "role": row["role"] or "user",
                 "created_at": row["created_at"] or "",
                 "is_blocked": int(_col(row, "is_blocked", 0) or 0),
@@ -89,6 +103,7 @@ def migrate(sqlite_path: str, db) -> dict:
     if user_docs:
         db.users.insert_many(user_docs)
     counts["users"] = len(user_docs)
+    counts["avatars_remapped"] = avatars_remapped
 
     # ── sessions ───────────────────────────────────────────────────────────
     session_docs = []
@@ -162,8 +177,9 @@ def migrate(sqlite_path: str, db) -> dict:
         db.watchlist.insert_many(wl_docs)
     counts["watchlist"] = len(wl_docs)
 
-    # ── library (GLOBAL): watchlist / progress / app_kv / notifications ──────
-    counts.update(_migrate_library(conn, db))
+    # NOTE: legacy progress/app_kv/notifications were GLOBAL (no user owner) and
+    # are now per-user — anonymous global rows can't be attributed, so they are
+    # intentionally NOT migrated. Users re-create progress/settings after login.
 
     # ── static_pages ─────────────────────────────────────────────────────────
     sp_docs = []
@@ -203,65 +219,6 @@ def migrate(sqlite_path: str, db) -> dict:
     return counts
 
 
-def _migrate_library(conn: sqlite3.Connection, db) -> dict:
-    counts: dict[str, int] = {}
-
-    lw_docs = [
-        {
-            "_id": int(row["anime_id"]),
-            "added_at": _col(row, "added_at", "") or "",
-            "status": row["status"],
-            "favorite": bool(_col(row, "favorite", 0)),
-            "notifications_enabled": bool(_col(row, "notifications_enabled", 1)),
-            "last_watched_episode": _col(row, "last_watched_episode", None),
-        }
-        for row in _rows(conn, "watchlist")
-    ]
-    for doc in lw_docs:
-        db.library_watchlist.replace_one({"_id": doc["_id"]}, doc, upsert=True)
-    counts["library_watchlist"] = len(lw_docs)
-
-    pr_docs = [
-        {
-            "anime_id": int(row["anime_id"]),
-            "episode_number": int(row["episode_number"]),
-            "watched": bool(_col(row, "watched", 0)),
-            "watched_at": _col(row, "watched_at", None),
-        }
-        for row in _rows(conn, "progress")
-    ]
-    if pr_docs:
-        db.progress.insert_many(pr_docs)
-    counts["progress"] = len(pr_docs)
-
-    kv_docs = [
-        {"_id": row["key"], "value": _json_or(row["value_json"], None)}
-        for row in _rows(conn, "app_kv")
-    ]
-    for doc in kv_docs:
-        db.app_kv.replace_one({"_id": doc["_id"]}, doc, upsert=True)
-    counts["app_kv"] = len(kv_docs)
-
-    nt_docs = [
-        {
-            "_id": row["id"],
-            "anime_id": int(row["anime_id"]),
-            "episode_number": _col(row, "episode_number", None),
-            "title": row["title"] or "",
-            "message": row["message"] or "",
-            "created_at": row["created_at"] or "",
-            "read": int(_col(row, "read", 0) or 0),
-            "type": row["type"] or "",
-        }
-        for row in _rows(conn, "notifications")
-    ]
-    for doc in nt_docs:
-        db.notifications.replace_one({"_id": doc["_id"]}, doc, upsert=True)
-    counts["notifications"] = len(nt_docs)
-
-    return counts
-
-
 def _col(row: sqlite3.Row, name: str, default):
     """Read a column that may not exist in older SQLite schemas."""
     return row[name] if name in row.keys() else default
@@ -270,12 +227,14 @@ def _col(row: sqlite3.Row, name: str, default):
 def main() -> int:
     env = get_settings()
     sqlite_path = env.legacy_sqlite_path
+    avatars_dir = Path(env.data_dir).resolve() / "avatars"
     print(f"Source SQLite: {sqlite_path}")
     print(f"Target Mongo:  {env.mongodb_uri} / {env.mongodb_db}")
+    print(f"Avatars dir:   {avatars_dir}")
 
     client = MongoClient(env.mongodb_uri, tz_aware=True)
     try:
-        counts = migrate(sqlite_path, client[env.mongodb_db])
+        counts = migrate(sqlite_path, client[env.mongodb_db], avatars_dir)
     finally:
         client.close()
 

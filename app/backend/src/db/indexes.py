@@ -11,6 +11,7 @@ from pymongo import ASCENDING, DESCENDING, TEXT
 async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     # Catalog: list/sort/filter + visibility
     await db.anime.create_index([("status_rank", ASCENDING), ("year", DESCENDING)])
+    await db.anime.create_index([("aired_on", DESCENDING), ("_id", DESCENDING)])
     await db.anime.create_index("year")
     await db.anime.create_index("status")
     await db.anime.create_index("has_kodik")
@@ -35,6 +36,17 @@ async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     await db.watchlist.create_index(
         [("user_id", ASCENDING), ("anime_id", ASCENDING)], unique=True
     )
+
+    # Per-user library: progress / settings / notifications
+    await db.progress.create_index(
+        [("user_id", ASCENDING), ("anime_id", ASCENDING),
+         ("episode_number", ASCENDING)],
+        unique=True,
+    )
+    await db.user_settings.create_index(
+        [("user_id", ASCENDING), ("key", ASCENDING)], unique=True
+    )
+    await db.notifications.create_index([("user_id", ASCENDING)])
 
     # Audit log newest-first
     await db.audit_log.create_index([("created_at", DESCENDING)])

@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SortDropdown } from '@/features/catalog/components/controls/SortDropdown'
+import { sortOptions } from '@/utils/catalog/catalogData'
 
 export function AnimeCatalog() {
 	const [searchParams, setSearchParams] = useSearchParams()
@@ -23,7 +24,7 @@ export function AnimeCatalog() {
 	const [isIntroExpanded, setIsIntroExpanded] = useState(false)
 	const [isAutoLoadEnabled, setIsAutoLoadEnabled] = useState(false)
 	const loadMoreRef = useRef<HTMLDivElement>(null)
-	const sortOption = (searchParams.get('sort') as SortOption) ?? 'новизне'
+	const sortOption = normalizeSortOption(searchParams.get('sort'))
 	const sortDirection =
 		(searchParams.get('direction') as SortDirection) ?? 'desc'
 	const filters = useMemo(
@@ -138,4 +139,11 @@ export function AnimeCatalog() {
 			</div>
 		</section>
 	)
+}
+
+function normalizeSortOption(value: string | null): SortOption {
+	if (value === 'рейтинг (в работе)') return 'рейтингу'
+	return sortOptions.includes(value as SortOption)
+		? (value as SortOption)
+		: 'новизне'
 }

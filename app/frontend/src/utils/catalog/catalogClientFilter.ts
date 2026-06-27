@@ -74,35 +74,34 @@ export function applyFilters(anime: Anime[], f: ClientFilters): Anime[] {
 }
 
 /**
- * Client-side catalog sorting. Announced (anons) titles are grouped apart from
- * the rest. For the "новизне" sort they follow the direction (desc → upcoming
- * on top, asc → at the bottom). For every other sort they always go LAST (their
- * future years/ids would otherwise dominate the top).
+ * Client-side catalog sorting. The "новизне" sort excludes announced titles:
+ * users expect current/newly released items there, not future placeholders. For
+ * every other sort announced titles are kept, but grouped last so future years
+ * do not dominate the top.
  */
 export function applySort(
 	anime: Anime[],
 	option: SortOption,
 	direction: SortDirection,
+	excludeAnnounced = false,
 ): Anime[] {
-	return [...anime].sort((a, b) => {
+	const source =
+		option === 'новизне' && excludeAnnounced
+			? anime.filter(item => item.status !== 'announced')
+			: anime
+
+	return [...source].sort((a, b) => {
 		const aAnnounced = a.status === 'announced' ? 1 : 0
 		const bAnnounced = b.status === 'announced' ? 1 : 0
-		if (aAnnounced !== bAnnounced) {
-			if (option === 'новизне') {
-				// desc → announced first, asc → announced last
-				return direction === 'desc'
-					? bAnnounced - aAnnounced
-					: aAnnounced - bAnnounced
-			}
-			return aAnnounced - bAnnounced // other sorts: announced last
-		}
+		if (aAnnounced !== bAnnounced) return aAnnounced - bAnnounced
 
 		let cmp = 0
 
 		if (option === 'рейтингу') {
 			cmp = b.rating - a.rating
 		} else if (option === 'новизне') {
-			cmp = b.year - a.year
+			cmp = startDateRank(b) - startDateRank(a)
+			if (cmp === 0) cmp = b.year - a.year
 			if (cmp === 0) {
 				cmp =
 					new Date(b.updated_at).getTime() -
@@ -115,4 +114,10 @@ export function applySort(
 
 		return direction === 'asc' ? -cmp : cmp
 	})
+}
+
+function startDateRank(item: Anime): number {
+	const value = item.aired_on || ''
+	const timestamp = value ? Date.parse(value) : Number.NaN
+	return Number.isFinite(timestamp) ? timestamp : 0
 }

@@ -23,6 +23,7 @@ export type Anime = {
 	type: AnimeType
 	status: AnimeStatus
 	year: number
+	aired_on?: string
 	season?: AnimeSeason
 	episodes_total: number
 	episodes_aired: number

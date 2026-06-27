@@ -52,6 +52,11 @@ export function WatchlistActions({ animeId }: WatchlistActionsProps) {
 			return
 		}
 
+		// Optimistic: paint the new state instantly (one status per title), then
+		// reconcile with the server — revert if it fails.
+		const previous = active
+		const willActivate = !active.has(status)
+		setActive(willActivate ? new Set([status]) : new Set())
 		setPending(status)
 		try {
 			const result = await toggleWatchlistStatus(animeId, status)
@@ -62,6 +67,7 @@ export function WatchlistActions({ animeId }: WatchlistActionsProps) {
 					: `Убрано: ${WATCHLIST_LABELS[status]}`,
 			)
 		} catch {
+			setActive(previous) // revert on failure
 			notifyError('Не удалось обновить список')
 		} finally {
 			setPending(null)
@@ -81,7 +87,7 @@ export function WatchlistActions({ animeId }: WatchlistActionsProps) {
 						title={WATCHLIST_LABELS[status]}
 						disabled={pending === status}
 						onClick={() => void onToggle(status)}
-						className={`flex h-10 cursor-pointer items-center justify-center border-r border-aw-border text-sm transition last:border-r-0 disabled:cursor-not-allowed disabled:opacity-60 ${
+						className={`flex h-10 cursor-pointer items-center justify-center border-r border-aw-border text-sm transition last:border-r-0 disabled:cursor-default ${
 							isActive
 								? 'bg-aw-accent text-white'
 								: 'text-aw-text hover:bg-aw-elevated hover:text-aw-accent'

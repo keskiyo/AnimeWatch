@@ -13,6 +13,13 @@ def unavailable_player(message: str) -> dict:
     return {"available": False, "provider": "kodik", "message": message}
 
 
+def episode_count(result: dict[str, Any]) -> int:
+    return max(
+        positive_number(result.get("episodes_count")),
+        positive_number(result.get("last_episode")),
+    )
+
+
 def normalize_kodik_player_result(result: dict[str, Any] | None) -> dict:
     if not result:
         return unavailable_player("Kodik player was not found")
@@ -32,7 +39,7 @@ def normalize_kodik_player_result(result: dict[str, Any] | None) -> dict:
         "link": link,
         "translation": translation.get("title") or "Kodik",
         "quality": result.get("quality") or "auto",
-        "episodes_count": positive_number(result.get("episodes_count")),
+        "episodes_count": episode_count(result),
         "screenshots": [
             item
             for item in result.get("screenshots") or []
@@ -69,7 +76,7 @@ def extract_translations(results: list[dict]) -> list[dict]:
                 "id": tr_id,
                 "title": title,
                 "link": link,
-                "episodes_count": positive_number(result.get("episodes_count")),
+                "episodes_count": episode_count(result),
             }
         )
     return translations

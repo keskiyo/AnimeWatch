@@ -71,7 +71,9 @@ export function useAnimeCatalog(
 
 	const processed = useMemo(() => {
 		const filtered = filters ? applyFilters(allAnime, filters) : allAnime
-		return applySort(filtered, sortOption, sortDirection)
+		const excludeAnnounced =
+			sortOption === 'новизне' && !filters?.statuses.has('announced')
+		return applySort(filtered, sortOption, sortDirection, excludeAnnounced)
 	}, [allAnime, filters, sortOption, sortDirection])
 	const displayed = processed.slice(0, displayCount)
 	const hasMore = displayCount < processed.length

@@ -9,14 +9,20 @@ from src.db.anime_catalog import doc_to_anime
 from src.db.mongo import get_db
 from src.models import Anime
 
-# Hide titles confirmed to have no Kodik dubbing (has_kodik = 0). Missing/null
-# (unchecked) and 1 (available) stay visible; announced titles always visible.
+# Hide ongoing/released titles confirmed to have no Kodik player. Missing/null
+# (unchecked) and available titles stay visible; announced titles always stay
+# visible because video is not expected before release.
 _KODIK_VISIBLE: dict = {
-    "$or": [{"has_kodik": None}, {"has_kodik": {"$ne": 0}}, {"status": "announced"}]
+    "$or": [{"has_kodik": {"$ne": 0}}, {"status": "announced"}]
 }
 
 # Default catalog order: ongoing → released → announced, newest, best
-_DEFAULT_SORT = [("status_rank", ASCENDING), ("year", DESCENDING), ("rating", DESCENDING)]
+_DEFAULT_SORT = [
+    ("status_rank", ASCENDING),
+    ("aired_on", DESCENDING),
+    ("year", DESCENDING),
+    ("rating", DESCENDING),
+]
 
 # List/card views don't need detail-only fields — exclude them so /anime/bulk
 # stays light (description + detail payloads load via /animes/{id}).
@@ -62,6 +68,18 @@ async def get_sitemap_rows() -> list[dict]:
     ]
 
 
+async def get_distinct_studios() -> list[str]:
+    """Non-empty studio names among visible titles (for studio sitemap URLs)."""
+    values = await get_db().anime.distinct("studio", _KODIK_VISIBLE)
+    return sorted(v for v in values if v)
+
+
+async def get_distinct_genres() -> list[str]:
+    """Non-empty genres among visible titles (for genre landing sitemap URLs)."""
+    values = await get_db().anime.distinct("genres", _KODIK_VISIBLE)
+    return sorted(v for v in values if v)
+
+
 async def get_anime_catalog_count(query: dict[str, str | None]) -> int:
     return int(await get_db().anime.count_documents(_build_filter(query)))
 
@@ -81,7 +99,11 @@ async def get_anime_catalog_page(query: dict[str, str | None]) -> dict:
         .limit(limit)
     )
     if collation:
-        cursor = cursor.collation(collation)
+        try:
+            cursor = cursor.collation(collation)
+        except TypeError:
+            # mongomock-motor does not implement collation; real Mongo does.
+            pass
     data = [doc_to_anime(doc) async for doc in cursor]
     return {"data": data, "total": int(total), "page": page}
 
@@ -139,7 +161,7 @@ def _build_filter(query: dict[str, str | None]) -> dict:
     if year:
         clauses.append({"year": year})
 
-    clauses.append(_KODIK_VISIBLE)  # always hide confirmed-no-Kodik
+    clauses.append(_KODIK_VISIBLE)
     return {"$and": clauses}
 
 
@@ -153,12 +175,12 @@ def _sort_spec(query: dict[str, str | None]) -> tuple[list, dict | None]:
     if sort == "popularity":
         return [("score_count", d)], None
     if sort in ("novelty", "startDate"):
-        return [("year", d), ("_id", d)], None
+        return [("aired_on", d), ("year", d), ("_id", d)], None
     if sort in ("date", "createdAt"):
         return [("_id", d)], None
     if sort == "title":
-        # Titles read A→Z by default; collation gives case-insensitive order
-        return [("title_ru", ASCENDING if desc else DESCENDING)], {
+        # Collation gives case-insensitive title order.
+        return [("title_ru", d)], {
             "locale": "en",
             "strength": 2,
         }

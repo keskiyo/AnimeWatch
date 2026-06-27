@@ -12,13 +12,17 @@ export function AnimeFrames({ frames }: AnimeFramesProps) {
 	const railRef = useRef<HTMLDivElement>(null)
 	const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 	const [lightboxAlt, setLightboxAlt] = useState('')
+	const shouldShowArrows = frames.length > 5
 
 	if (frames.length === 0) return null
 
 	function scroll(direction: 'left' | 'right') {
-		railRef.current?.scrollBy({
+		const rail = railRef.current
+		if (!rail) return
+		const distance = Math.max(rail.clientWidth * 0.8, 320)
+		rail.scrollBy({
 			behavior: 'smooth',
-			left: direction === 'left' ? -480 : 480,
+			left: direction === 'left' ? -distance : distance,
 		})
 	}
 
@@ -35,22 +39,24 @@ export function AnimeFrames({ frames }: AnimeFramesProps) {
 				Кадры
 			</h2>
 			<div className='group relative'>
-				<button
-					type='button'
-					className='pointer-events-none absolute left-3 top-1/2 z-3 inline-flex h-14 w-14 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-0 bg-[rgba(36,37,38,0.92)] text-aw-text opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:bg-[rgba(49,50,51,0.98)]'
-					aria-label='Прокрутить кадры влево'
-					onClick={() => scroll('left')}
-				>
-					<ChevronLeft size={28} aria-hidden='true' />
-				</button>
+				{shouldShowArrows && (
+					<button
+						type='button'
+						className='pointer-events-none absolute left-3 top-1/2 z-3 inline-flex h-14 w-14 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-0 bg-[rgba(36,37,38,0.92)] text-aw-text opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:bg-[rgba(49,50,51,0.98)]'
+						aria-label='Прокрутить кадры влево'
+						onClick={() => scroll('left')}
+					>
+						<ChevronLeft size={28} aria-hidden='true' />
+					</button>
+				)}
 				<div
 					ref={railRef}
-					className='grid auto-cols-[calc((100%-4*0.875rem)/5)] grid-flow-col gap-3.5 overflow-x-auto scroll-smooth scrollbar-none [&::-webkit-scrollbar]:hidden max-[900px]:auto-cols-[calc((100%-0.875rem)/2)] max-[520px]:auto-cols-[100%]'
+					className='flex snap-x gap-3.5 overflow-x-auto scroll-smooth scrollbar-none [&::-webkit-scrollbar]:hidden'
 				>
 					{frames.map(frame => (
 						<div
 							key={frame.id}
-							className='relative aspect-video overflow-hidden rounded-md bg-aw-elevated'
+							className='relative aspect-video w-[calc((100%_-_3.5rem)/5)] min-w-[calc((100%_-_3.5rem)/5)] snap-start overflow-hidden rounded-md bg-aw-elevated max-[900px]:w-[calc((100%_-_0.875rem)/2)] max-[900px]:min-w-[calc((100%_-_0.875rem)/2)] max-[520px]:w-full max-[520px]:min-w-full'
 						>
 							{frame.imageUrl ? (
 								<img
@@ -72,14 +78,16 @@ export function AnimeFrames({ frames }: AnimeFramesProps) {
 						</div>
 					))}
 				</div>
-				<button
-					type='button'
-					className='pointer-events-none absolute right-3 top-1/2 z-3 inline-flex h-14 w-14 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-0 bg-[rgba(36,37,38,0.92)] text-aw-text opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:bg-[rgba(49,50,51,0.98)]'
-					aria-label='Прокрутить кадры вправо'
-					onClick={() => scroll('right')}
-				>
-					<ChevronRight size={28} aria-hidden='true' />
-				</button>
+				{shouldShowArrows && (
+					<button
+						type='button'
+						className='pointer-events-none absolute right-3 top-1/2 z-3 inline-flex h-14 w-14 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-0 bg-[rgba(36,37,38,0.92)] text-aw-text opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 hover:bg-[rgba(49,50,51,0.98)]'
+						aria-label='Прокрутить кадры вправо'
+						onClick={() => scroll('right')}
+					>
+						<ChevronRight size={28} aria-hidden='true' />
+					</button>
+				)}
 			</div>
 
 			{lightboxSrc && (

@@ -1,7 +1,9 @@
 # Frontend Structure
 
 Документ описывает, как устроена папка `app/frontend` и куда добавлять новые
-страницы, компоненты, типы и API helpers.
+страницы, компоненты, типы и API helpers. Фронтовые компоненты можно держать до
+200 строк; hooks, API helpers, utils и крупные feature-модули держи до 150 строк
+и дроби заранее.
 
 ## Корень `app/frontend`
 
@@ -70,8 +72,13 @@
 
 ### `features/catalog/`
 
-- `hooks/useAnimeCache.ts` — session-level cache для `/anime/bulk` (zustand store).
+- `hooks/useAnimeCache.ts` — catalog cache для `/anime/bulk` (zustand store):
+  localStorage `aw:catalog:v4` рисуется сразу, затем один background revalidate
+  за JS-сессию.
 - `hooks/useAnimeCatalog.ts` — применяет client-side filters/sort/pagination.
+  «новизне» сортирует по `aired_on`/дате старта, исключает анонсы только если
+  пользователь явно не выбрал статус `announced`; «дате добавления» идёт от
+  новых id к старым; «рейтингу» сортирует по rating.
 - `hooks/useCatalogFilterParams.ts` — состояние фильтров каталога.
 - `components/CatalogPageLayout.tsx`, `CatalogIntro.tsx`, `AnimeCatalog.tsx`.
 - `components/filters/*` — sidebar filters, genres, year range, checkbox groups.
@@ -84,7 +91,10 @@
 - `components/AnimePageContent.tsx` — собирает detail page.
 - `components/hero/*` — poster/actions/info panel/hero.
 - `components/player/*` — Kodik iframe frame, episodes, sidebar, placeholder.
-- `components/frames/*` — screenshots и lightbox.
+  По клику на «Серия №» под строкой серий открывается numeric picker; ввод
+  больше доступного выбирает последнюю доступную серию.
+- `components/frames/*` — screenshots и lightbox. Стрелки не рендерятся, если
+  кадров 5 или меньше.
 - `components/comments/*` — reviews/comments UI; `CommentThread.tsx`
   рекурсивно рендерит дерево ответов (сворачивание, «Ещё N ответов»).
 - `components/AnimeRelated.tsx` — related block.
@@ -142,7 +152,8 @@
 
 Сгруппированы по доменам:
 - `catalog/` — catalogClientFilter, catalogFilters, catalogData,
-  catalogFormatters, catalogTexts.
+  catalogFormatters, catalogTexts. `catalogData` — только статические опции/
+  подписи фильтров, не mock-каталог.
 - `animepage/` — animePageData, animePagePlayerData, animeInfoRows,
   animePageFormatters, animePageLabels, structuredData (JSON-LD), player.
 - `anime/` — animeSlug, animeRating, animeYear, imageProxy, kodikLink.
@@ -157,7 +168,8 @@
 
 ## Data Flow
 
-1. `useAnimeCache` грузит `/anime/bulk` один раз за JS-сессию.
+1. `useAnimeCache` берёт сохранённый `/anime/bulk` из localStorage и один раз за
+   JS-сессию перепроверяет данные в фоне.
 2. Каталог, ongoing, поиск и карточки фильтруются на клиенте из cache.
 3. Detail page получает `/animes/:id` из Mongo-backed backend.
 4. Плеер Kodik догружается отдельно и не должен блокировать hero/detail.

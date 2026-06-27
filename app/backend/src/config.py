@@ -29,6 +29,7 @@ class Settings:
     catalog_refresh_token: str | None
     catalog_refresh_timeout_ms: int
     site_url: str | None
+    frontend_dist: str  # built SPA dir (index.html + assets) for server-side SEO host
 
 
 def get_settings() -> Settings:
@@ -90,6 +91,8 @@ def get_settings() -> Settings:
         catalog_refresh_token=environ.get("CATALOG_REFRESH_TOKEN") or None,
         catalog_refresh_timeout_ms=_read_int("CATALOG_REFRESH_TIMEOUT_MS", 7_200_000),
         site_url=environ.get("SITE_URL") or None,
+        frontend_dist=environ.get("FRONTEND_DIST")
+        or str(Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"),
     )
 
 

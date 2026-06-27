@@ -21,6 +21,7 @@ class Anime(TypedDict, total=False):
     type: AnimeType
     status: AnimeStatus
     year: int
+    aired_on: str  # YYYY-MM-DD start date from Shikimori, when known
     season: AnimeSeason
     episodes_total: int
     episodes_aired: int

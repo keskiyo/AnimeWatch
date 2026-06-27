@@ -67,7 +67,12 @@ async def get_anime_catalog_by_studio(studio_name: str) -> list[Anime]:
             },
             _LIGHT_PROJECTION,
         )
-        .sort([("status_rank", ASCENDING), ("year", DESCENDING), ("rating", DESCENDING)])
+        .sort([
+            ("status_rank", ASCENDING),
+            ("aired_on", DESCENDING),
+            ("year", DESCENDING),
+            ("rating", DESCENDING),
+        ])
     )
     return [doc_to_anime(doc) async for doc in cursor]
 

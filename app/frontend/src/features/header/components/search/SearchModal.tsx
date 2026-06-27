@@ -2,11 +2,15 @@ import { SearchResultItem } from '@/features/header/components/search/SearchResu
 import { useAnimeSearch } from '@/features/header/hooks/useAnimeSearch'
 import type { SearchModalProps } from '@/types/search'
 import { Search, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
 
 export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 	const [query, setQuery] = useState('')
-	const { results, showResults, isApiLoading, reset } = useAnimeSearch(query)
+	// Keep typing responsive (INP): filter against the deferred value so each
+	// keystroke paints immediately while the heavy match runs in the background.
+	const deferredQuery = useDeferredValue(query)
+	const { results, showResults, isApiLoading, reset } =
+		useAnimeSearch(deferredQuery)
 
 	// Reset state when modal closes
 	useEffect(() => {
@@ -37,7 +41,12 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 	const isLoading = isApiLoading && results.length === 0
 
 	return (
-		<div className='fixed inset-0 z-50 bg-aw-surface animate-slideUpFade'>
+		<div
+			className='fixed inset-0 z-50 bg-aw-surface animate-slideUpFade'
+			role='dialog'
+			aria-modal='true'
+			aria-label='Поиск аниме'
+		>
 			<div className='mx-auto max-w-345 px-4 pt-6'>
 				<div className='flex items-center justify-between'>
 					<h2 className='text-xl font-semibold text-aw-text'>

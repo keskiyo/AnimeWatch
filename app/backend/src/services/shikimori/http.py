@@ -96,7 +96,8 @@ async def fetch_rest_json(
     path: str, settings: Settings, params: dict[str, str] | None = None
 ) -> Any:
     max_retries = 3
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    # follow_redirects: shikimori.one now 301-redirects to shikimori.io.
+    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
         for attempt in range(max_retries):
             await rest_throttle.wait()
             try:

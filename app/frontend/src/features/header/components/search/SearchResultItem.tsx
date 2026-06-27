@@ -3,6 +3,7 @@ import type { Anime } from '@/types/anime'
 import { formatAnimeType } from '@/utils/animepage/animePageLabels'
 import { formatAnimeRating, getAnimeRatingColor } from '@/utils/anime/animeRating'
 import { createAnimeSlug } from '@/utils/anime/animeSlug'
+import { prefetchAnimePage } from '@/utils/anime/prefetchAnime'
 import { Link } from 'react-router-dom'
 
 type SearchResultItemProps = {
@@ -18,6 +19,8 @@ export function SearchResultItem({ anime, onNavigate }: SearchResultItemProps) {
 			<Link
 				to={`/anime/${slug}`}
 				onClick={onNavigate}
+				onMouseEnter={() => prefetchAnimePage(anime.id)}
+				onFocus={() => prefetchAnimePage(anime.id)}
 				className='flex items-center gap-3 px-4 py-3 no-underline hover:bg-aw-elevated'
 			>
 				<div className='relative h-16 w-12 shrink-0 overflow-hidden rounded bg-aw-elevated'>

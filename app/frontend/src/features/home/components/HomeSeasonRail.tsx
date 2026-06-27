@@ -2,6 +2,7 @@ import { PosterImage } from '@/components/anime/PosterImage'
 import type { Anime } from '@/types/anime'
 import { formatAnimeRating, getAnimeRatingColor } from '@/utils/anime/animeRating'
 import { createAnimeSlug } from '@/utils/anime/animeSlug'
+import { prefetchAnimePage } from '@/utils/anime/prefetchAnime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
@@ -51,6 +52,8 @@ export function HomeSeasonRail({ anime, isLoading }: HomeSeasonRailProps) {
 								to={`/anime/${createAnimeSlug(item.id, item.title_en || title)}`}
 								aria-label={title}
 								className='relative grid min-w-0 no-underline'
+								onMouseEnter={() => prefetchAnimePage(item.id)}
+								onFocus={() => prefetchAnimePage(item.id)}
 							>
 								<span
 									className={`absolute left-0 top-2 z-1 min-w-10.5 rounded px-2 py-1.5 text-center text-[15px] font-bold leading-none ${getAnimeRatingColor(item.rating)}`}
@@ -63,8 +66,6 @@ export function HomeSeasonRail({ anime, isLoading }: HomeSeasonRailProps) {
 										title={title}
 										loading={index === 0 ? 'eager' : 'lazy'}
 										fetchPriority={index === 0 ? 'high' : 'auto'}
-										maxRetries={5}
-										retryDelay={2000}
 									/>
 								</span>
 								<small className='mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-aw-text'>

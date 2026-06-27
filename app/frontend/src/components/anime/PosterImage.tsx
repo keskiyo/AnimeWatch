@@ -1,10 +1,14 @@
 import { proxyImage } from '@/utils/anime/imageProxy'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+/** Shown while the real poster loads and when it's missing or fails to load. */
+const POSTER_PLACEHOLDER = '/not-poster.png'
+
 type PosterImageProps = {
 	url: string | undefined | null
 	title: string
 	className?: string
+	/** @deprecated kept for call-site compatibility — placeholder is now an image. */
 	placeholderClassName?: string
 	loading?: 'lazy' | 'eager'
 	fetchPriority?: 'high' | 'low' | 'auto'
@@ -18,20 +22,21 @@ export function PosterImage({
 	url,
 	title,
 	className = 'h-full w-full object-cover',
-	placeholderClassName = 'flex h-full w-full items-center justify-center text-[clamp(20px,4vw,38px)] font-black text-white/60',
 	loading = 'lazy',
 	fetchPriority = 'auto',
 	proxyWidth = 360,
 	onClick,
-	maxRetries = 5,
-	retryDelay = 2000,
+	maxRetries = 3,
+	retryDelay = 1500,
 }: PosterImageProps) {
 	const [isBroken, setIsBroken] = useState(false)
+	const [isLoaded, setIsLoaded] = useState(false)
 	const [retry, setRetry] = useState(0)
 	const retryTimerRef = useRef<number | null>(null)
 
 	useEffect(() => {
 		setIsBroken(false)
+		setIsLoaded(false)
 		setRetry(0)
 
 		if (retryTimerRef.current) {
@@ -67,30 +72,42 @@ export function PosterImage({
 		setIsBroken(true)
 	}
 
-	if (!src || isBroken) {
-		return (
-			<span
-				className={placeholderClassName}
-				aria-label={`${title} — постер недоступен`}
-			>
-				{getInitials(title)}
-			</span>
-		)
-	}
+	const showImage = Boolean(src) && !isBroken
 
 	return (
-		<img
-			key={src}
-			className={className}
-			src={src}
-			alt={`${title} постер`}
-			loading={loading}
-			fetchPriority={fetchPriority}
-			decoding='async'
-			onError={handleError}
-			onLoad={() => setIsBroken(false)}
+		<span
+			className='relative block h-full w-full overflow-hidden'
 			onClick={onClick}
-		/>
+		>
+			{/* Placeholder sits underneath: visible while loading, missing or broken. */}
+			<img
+				src={POSTER_PLACEHOLDER}
+				alt=''
+				aria-hidden='true'
+				className='absolute inset-0 h-full w-full object-cover'
+				loading={loading}
+				decoding='async'
+			/>
+
+			{showImage && (
+				<img
+					key={src}
+					className={`${className} absolute inset-0 transition-opacity duration-300 ${
+						isLoaded ? 'opacity-100' : 'opacity-0'
+					}`}
+					src={src as string}
+					alt={`${title} постер`}
+					loading={loading}
+					fetchPriority={fetchPriority}
+					decoding='async'
+					onError={handleError}
+					onLoad={() => {
+						setIsLoaded(true)
+						setIsBroken(false)
+					}}
+				/>
+			)}
+		</span>
 	)
 }
 
@@ -105,13 +122,4 @@ function addRetryParam(url: string, retry: number): string {
 		const separator = url.includes('?') ? '&' : '?'
 		return `${url}${separator}_poster_retry=${retry}`
 	}
-}
-
-function getInitials(value: string): string {
-	return value
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 2)
-		.map(word => word[0]?.toUpperCase() ?? '')
-		.join('')
 }

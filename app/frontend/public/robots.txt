@@ -8,4 +8,6 @@ Disallow: /profile
 # Query-string URLs are filter/sort variants of canonical pages — don't crawl
 Disallow: /*?
 
-Sitemap: http://localhost:4173/sitemap.xml
+# In production robots.txt is served by the backend with an absolute Sitemap URL
+# derived from SITE_URL (see app/backend/src/routers/seo.py). This static copy is
+# a dev fallback only.

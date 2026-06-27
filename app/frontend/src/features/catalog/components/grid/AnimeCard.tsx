@@ -5,6 +5,7 @@ import { formatAnimeRating, getAnimeRatingColor } from '@/utils/anime/animeRatin
 import { createAnimeSlug } from '@/utils/anime/animeSlug'
 import { formatAnimeReleaseYear } from '@/utils/anime/animeYear'
 import { formatCatalogAnimeType } from '@/utils/catalog/catalogFormatters'
+import { prefetchAnimePage } from '@/utils/anime/prefetchAnime'
 import { Link } from 'react-router-dom'
 
 const CARD_CLASSES: Record<CatalogViewMode, string> = {
@@ -38,6 +39,9 @@ export function AnimeCard({
 			to={`/anime/${slug}`}
 			aria-label={title}
 			className={CARD_CLASSES[variant]}
+			onMouseEnter={() => prefetchAnimePage(anime.id)}
+			onFocus={() => prefetchAnimePage(anime.id)}
+			onTouchStart={() => prefetchAnimePage(anime.id)}
 		>
 			<div
 				className={`group relative row-span-4 flex aspect-3/4 w-full items-end justify-center overflow-hidden rounded-md bg-aw-elevated transition-transform hover:-translate-y-0.5 hover:saturate-[1.08] ${POSTER_CLASSES[variant]}`}

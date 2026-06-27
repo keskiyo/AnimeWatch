@@ -47,7 +47,7 @@ async def anime_catalog(
 
 @router.get("/anime/bulk")
 async def anime_bulk() -> dict:
-    """Full catalog from the local anime_catalog table (no Shikimori calls)."""
+    """Full catalog from the local Mongo `anime` collection (no Shikimori calls)."""
     try:
         return await get_bulk_anime_catalog()
     except Exception as exc:
@@ -77,7 +77,7 @@ async def anime_episodes(anime_id: int) -> list[dict]:
 
 @router.get("/studio/{studio_name}/anime")
 async def studio_anime_list(studio_name: str) -> dict:
-    """All anime produced by *studio_name*, read from SQLite when available."""
+    """All anime produced by *studio_name*, read from the Mongo `anime` collection."""
     return await get_studio_anime(studio_name)
 
 

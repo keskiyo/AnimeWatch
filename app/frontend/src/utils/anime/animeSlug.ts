@@ -12,16 +12,23 @@ function transliterate(text: string): string {
 	return text.toLowerCase().replace(/[а-яё]/g, ch => CYRILLIC[ch] ?? ch)
 }
 
-export function createAnimeSlug(id: number, title: string): string {
-	const normalizedTitle = transliterate(title)
+function kebab(text: string): string {
+	return transliterate(text)
 		.normalize('NFKD')
 		.replace(new RegExp('[\\u0300-\\u036f]', 'g'), '') // strip diacritics
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-+|-+$/g, '')
 		.replace(/-{2,}/g, '-')
+}
 
-	return `${id}-${normalizedTitle || 'anime'}`
+export function createAnimeSlug(id: number, title: string): string {
+	return `${id}-${kebab(title) || 'anime'}`
+}
+
+/** URL slug for a genre landing page — MUST match backend services/seo.py. */
+export function genreSlug(name: string): string {
+	return kebab(name) || 'anime'
 }
 
 export function parseAnimeSlugId(value: string | undefined): number | undefined {

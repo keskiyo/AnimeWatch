@@ -1,8 +1,8 @@
 """MongoDB access: a single Motor client + database handle.
 
-Replaces the old sqlite `connect()`. The client is created lazily on first use
-(inside the running event loop) and reused process-wide. Tests swap the client
-for a mongomock-motor instance via `set_client`.
+The client is created lazily on first use (inside the running event loop) and
+reused process-wide. Tests swap the client for a mongomock-motor instance via
+`set_client`.
 """
 
 from bson import ObjectId
